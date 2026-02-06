@@ -1,0 +1,41 @@
+name: ETF 데이터 자동 업데이트
+
+on:
+  schedule:
+    # 미국 장 마감 후 (UTC 22:00 = KST 07:00 다음날)
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch: # 수동 실행 가능
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 레포 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install yfinance pandas
+
+      - name: ETF 데이터 업데이트
+        run: python update_data.py
+
+      - name: 변경사항 커밋 & 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "변경사항 없음, 스킵"
+          else
+            git commit -m "📊 ETF 데이터 자동 업데이트 $(date +'%Y-%m-%d')"
+            git push
+          fi
