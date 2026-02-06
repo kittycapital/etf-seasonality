@@ -78,9 +78,15 @@
             justify-content: flex-start;
             gap: 6px;
             margin-bottom: 25px;
-            padding: 0 5px;
+            padding: 0 5px 8px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+        }
+
+        .asset-tabs::after {
+            content: '';
+            flex-shrink: 0;
+            width: 10px;
         }
 
         .asset-tab {
@@ -684,13 +690,18 @@
                 if (yd.totalReturn < worstReturn) { worstReturn = yd.totalReturn; worstYear = yd.year; }
             });
 
-            const maxDays = Math.max(...historicalData.map(y => y.data.length));
-            const avgData = [];
-            for (let i = 0; i < maxDays; i++) {
-                let sum = 0, cnt = 0;
-                historicalData.forEach(yd => { if (yd.data[i]) { sum += yd.data[i].return; cnt++; } });
-                if (cnt > 0) avgData.push({ x: i + 1, y: sum / cnt });
-            }
+            // Calculate average line (day-based, not index-based)
+            const avgByDay = {};
+            historicalData.forEach(yd => {
+                yd.data.forEach(d => {
+                    if (!avgByDay[d.day]) avgByDay[d.day] = { sum: 0, cnt: 0 };
+                    avgByDay[d.day].sum += d.return;
+                    avgByDay[d.day].cnt++;
+                });
+            });
+            const avgData = Object.keys(avgByDay)
+                .map(Number).sort((a, b) => a - b)
+                .map(day => ({ x: day, y: avgByDay[day].sum / avgByDay[day].cnt }));
 
             // Faded lines
             historicalData.forEach(yd => {
