@@ -75,18 +75,11 @@
         /* Asset Tabs */
         .asset-tabs {
             display: flex;
-            justify-content: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
             gap: 6px;
             margin-bottom: 25px;
             padding: 0 5px 8px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .asset-tabs::after {
-            content: '';
-            flex-shrink: 0;
-            width: 10px;
         }
 
         .asset-tab {
@@ -380,7 +373,7 @@
             .header { padding: 20px 0 15px; margin-bottom: 15px; }
             .header h1 { font-size: 1.4rem; }
             .header p { font-size: 0.75rem; }
-            .asset-tabs { gap: 5px; margin-bottom: 20px; }
+            .asset-tabs { gap: 5px; margin-bottom: 20px; justify-content: center; }
             .asset-tab { padding: 8px 10px; gap: 5px; }
             .asset-badge { width: 24px; height: 24px; font-size: 0.5rem; }
             .asset-name { font-size: 0.75rem; }
