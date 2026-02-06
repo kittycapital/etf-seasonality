@@ -950,7 +950,7 @@
                 }
                 if (!yearOpen) return;
 
-                const points = [];
+                const points = [{ month: 0, price: basePrice }];
                 let lastKnown = yearOpen;
                 for (let m = 0; m < 12; m++) {
                     if (yearlyData[year][m]) {
@@ -961,7 +961,7 @@
                     }
                     const ret = (lastKnown - yearOpen) / yearOpen;
                     const projected = basePrice * (1 + ret);
-                    points.push({ month: m, price: projected });
+                    points.push({ month: m + 1, price: projected });
                 }
 
                 const yearReturn = (lastKnown - yearOpen) / yearOpen * 100;
@@ -972,15 +972,18 @@
             });
 
             // Average
-            const avgPoints = [];
-            for (let m = 0; m < 12; m++) {
+            const avgPoints = [{ month: 0, price: basePrice }];
+            for (let m = 1; m <= 12; m++) {
                 let sum = 0, cnt = 0;
-                scenarios.forEach(s => { sum += s.data[m].price; cnt++; });
+                scenarios.forEach(s => {
+                    const pt = s.data.find(d => d.month === m);
+                    if (pt) { sum += pt.price; cnt++; }
+                });
                 if (cnt > 0) avgPoints.push({ month: m, price: sum / cnt });
             }
 
             // Current year actual
-            const currentYearPoints = [];
+            const currentYearPoints = [{ month: 0, price: basePrice }];
             if (yearlyData[currentYear]) {
                 let yearOpen = null;
                 if (yearlyData[currentYear][0]) {
@@ -994,7 +997,7 @@
                             const days = Object.keys(yearlyData[currentYear][m]).map(Number).sort((a, b) => a - b);
                             if (days.length > 0) {
                                 lastKnown = yearlyData[currentYear][m][days[days.length - 1]];
-                                currentYearPoints.push({ month: m, price: lastKnown });
+                                currentYearPoints.push({ month: m + 1, price: lastKnown });
                             }
                         }
                     }
@@ -1067,7 +1070,7 @@
             }
 
             // Current year
-            if (currentYearData.length > 0) {
+            if (currentYearData.length > 1) {
                 datasets.push({
                     label: `${currentYear} (현재)`,
                     data: currentYearData.map(d => ({ x: d.month, y: d.price })),
@@ -1102,7 +1105,10 @@
                             displayColors: true,
                             callbacks: {
                                 title: (items) => {
-                                    if (items.length > 0) return MONTH_NAMES_KR[Math.round(items[0].parsed.x)] || '';
+                                    if (items.length > 0) {
+                                        const m = Math.round(items[0].parsed.x);
+                                        return m === 0 ? '시작' : MONTH_NAMES_KR[m - 1] || '';
+                                    }
                                     return '';
                                 },
                                 label: (context) => {
@@ -1116,10 +1122,10 @@
                     },
                     scales: {
                         x: {
-                            type: 'linear', min: 0, max: 11,
+                            type: 'linear', min: 0, max: 12,
                             title: { display: true, text: '월', color: '#888' },
                             grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { color: '#888', stepSize: 1, callback: v => MONTH_NAMES_KR[v] || '' }
+                            ticks: { color: '#888', stepSize: 1, callback: v => v === 0 ? '시작' : (MONTH_NAMES_KR[v - 1] || '') }
                         },
                         y: {
                             title: { display: true, text: '가격 (USD)', color: '#888' },
