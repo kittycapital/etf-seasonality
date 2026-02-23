@@ -2,11 +2,16 @@ import yfinance as yf
 import os
 from datetime import datetime
 
-# 13개 ETF 목록
+# 13개 ETF + 2개 암호화폐
 TICKERS = [
     'SPY', 'QQQ', 'DIA', 'IWM', 'ARKK', 'SCHD',
-    'XLE', 'EWY', 'EEM', 'TLT', 'GLD', 'SLV', 'USO'
+    'XLE', 'EWY', 'EEM', 'TLT', 'GLD', 'SLV', 'USO',
+    'BTC-USD', 'ETH-USD'
 ]
+
+# yfinance 티커 → CSV 파일명 매핑 (하이픈 → 언더스코어)
+def ticker_to_filename(ticker):
+    return ticker.replace('-', '_')
 
 # data/ 폴더 경로
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
@@ -33,7 +38,7 @@ def update_etf_data():
             available_cols = [c for c in cols if c in df.columns]
             df = df[available_cols]
             
-            filepath = os.path.join(DATA_DIR, f'{ticker}.csv')
+            filepath = os.path.join(DATA_DIR, f'{ticker_to_filename(ticker)}.csv')
             df.to_csv(filepath)
             
             rows = len(df)
