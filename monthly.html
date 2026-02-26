@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>월별 시즌널리티 분석 | Herdvibe</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg0:#000;--bg1:#07070d;--bg2:#0d0d16;--bg3:#13131f;--bg4:#1a1a2a;--bdr:#1a1a2e;--bdr2:#282845;--t1:#e8e8f0;--t2:#b0b0c8;--t3:#8888a0;--t4:#686880;--g:#00ff88;--r:#ff4466;--b:#4488ff;--y:#ffcc00}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg0);color:var(--t1);line-height:1.6;min-height:100vh;overflow-x:hidden}
+a{color:var(--g);text-decoration:none}::selection{background:var(--b);color:#fff}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg1)}::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+.hdr{padding:12px 28px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;background:var(--bg1);position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.hdr-title{font-weight:700;font-size:18px;color:#fff}
+.page{max-width:960px;margin:0 auto;padding:20px 28px}
+.asset-tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0;flex-wrap:wrap;justify-content:center}
+.asset-tabs::-webkit-scrollbar{display:none}
+.cat-label{width:100%;font-size:9px;font-weight:700;color:var(--t4);letter-spacing:1px;text-transform:uppercase;padding:6px 0 2px}
+.atab{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.atab:hover{background:var(--bg3);border-color:var(--bdr2)}
+.atab.on{background:var(--bg4);border-color:var(--y);box-shadow:0 0 12px rgba(255,204,0,.08)}
+.atab-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.atab-info{display:flex;flex-direction:column}
+.atab-name{font-weight:600;font-size:.8rem;color:var(--t1)}
+.atab-sub{font-size:.65rem;color:var(--t3)}
+.chart-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:11px;overflow:hidden;margin-bottom:20px}
+.chart-head{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 20px;border-bottom:1px solid var(--bdr);gap:8px}
+.chart-head h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:.875rem;font-weight:600;color:var(--t1)}
+.chart-legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.leg{display:flex;align-items:center;gap:4px;font-size:.65rem;color:var(--t3)}
+.ldot{width:8px;height:8px;border-radius:50%}
+.ldot.best{background:var(--g)}.ldot.worst{background:var(--r)}.ldot.avg{background:transparent;border:2px dashed #888}.ldot.cur{background:var(--y)}.ldot.sel{background:var(--b)}
+.chart-area{height:340px;position:relative;padding:12px 20px}
+.heatmap-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.heatmap-wrap::-webkit-scrollbar{display:none}
+.hm{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:.7rem;min-width:700px}
+.hm th{padding:8px 4px;text-align:center;font-weight:500;color:var(--t4);border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--bg2);font-size:.6rem}
+.hm td{padding:6px 3px;text-align:center;border-bottom:1px solid var(--bdr)}
+.hm tbody tr{cursor:pointer;transition:background .15s}
+.hm tbody tr:hover{background:var(--bg3)}
+.hm tbody tr.sel{background:rgba(68,136,255,.12)}
+.hm .yr{font-weight:600;color:var(--t1);text-align:left;padding-left:10px;font-size:.75rem}
+.hmc{border-radius:3px;padding:4px 2px;font-weight:500;font-size:.65rem}
+.hmc.pos{background:rgba(0,255,136,.1);color:var(--g)}
+.hmc.neg{background:rgba(255,68,102,.1);color:var(--r)}
+.hmc.zero{color:var(--t4)}
+.hmc.now{border:2px solid var(--y)}
+.hm tfoot{border-top:2px solid var(--bdr)}
+.hm tfoot tr{background:var(--bg4)}
+.hm tfoot td{padding:8px 4px;text-align:center;font-weight:600;font-size:.65rem}
+.hm tfoot .slbl{text-align:left;padding-left:10px;font-size:.7rem}
+.hm tfoot .sbst{color:var(--g)}.hm tfoot .swst{color:var(--r)}.hm tfoot .savg{color:var(--t2)}
+.share-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;margin-top:28px;background:var(--bg1);border:1px solid var(--bdr);border-radius:10px}
+.share-bar-preview{font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;font-family:'JetBrains Mono',monospace}
+.share-bar-preview b{color:var(--t2);font-weight:600}
+.share-bar-buttons{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.share-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--bdr2);background:var(--bg2);color:var(--t3);white-space:nowrap;font-family:inherit}
+.share-btn:hover{transform:translateY(-1px);color:var(--t1)}
+.share-btn svg{flex-shrink:0}
+.share-btn--x:hover{border-color:#fff;color:#fff;background:var(--bg3)}
+.share-btn--kakao:hover{border-color:#FEE500;color:#191919;background:#FEE500}
+.share-btn--tg:hover{border-color:#26A5E4;color:#fff;background:rgba(38,165,228,.15)}
+.share-btn--ig:hover{border-color:#E4405F;color:#fff;background:rgba(228,64,95,.15)}
+.share-btn--copy:hover{border-color:var(--g);color:var(--g);background:rgba(0,255,136,.07)}
+.inline-share{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 0;border-top:1px solid var(--bdr)}
+.inline-share .lbl{font-size:10px;color:var(--t4);margin-right:4px}
+.inline-share .share-btn{padding:6px 10px}
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:999}
+.toast{background:var(--bg4);border:1px solid var(--bdr2);border-left:3px solid var(--g);border-radius:8px;padding:10px 18px;font-size:12px;color:var(--t1);box-shadow:0 8px 32px rgba(0,0,0,.7);animation:toastIn .3s ease}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+.page{padding:12px 16px}.hdr{padding:8px 16px}
+.chart-area{height:260px;padding:10px}
+.chart-head{padding:12px 14px}
+.share-bar{flex-direction:column;gap:10px;align-items:stretch}
+.share-bar-preview{max-width:100%}
+.share-bar-buttons{justify-content:center;flex-wrap:wrap}
+.share-btn .lbl{display:none}.share-btn{padding:8px 10px}
+.inline-share .lbl{display:none}
+.atab{padding:6px 8px;gap:5px}.atab-icon{width:22px;height:22px;font-size:7px}.atab-name{font-size:.7rem}.atab-sub{font-size:.55rem}
+}
+@media(max-width:520px){
+.page{padding:10px 10px}.chart-area{height:240px;padding:8px}
+.hm{font-size:.6rem;min-width:600px}.hm th{font-size:.55rem}.hmc{font-size:.55rem}
+}
+</style>
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.1/kakao.min.js" crossorigin="anonymous" async></script>
+</head>
+<body>
+<div class="hdr"><span class="hdr-title">월별 시즌널리티 분석</span></div>
+<div class="page">
+  <nav class="asset-tabs" id="assetTabs"></nav>
+  <div class="chart-card">
+    <div class="chart-head">
+      <h3 id="chartTitle">S&P 500 2월, 과거엔 어땠을까?</h3>
+      <div class="chart-legend">
+        <div class="leg"><span class="ldot best"></span>역대 최고</div>
+        <div class="leg"><span class="ldot worst"></span>역대 최저</div>
+        <div class="leg"><span class="ldot avg"></span>평균</div>
+        <div class="leg"><span class="ldot cur"></span>현재 <span id="curYear">2026</span></div>
+        <div class="leg"><span class="ldot sel"></span>선택됨</div>
+      </div>
+    </div>
+    <div class="chart-area"><canvas id="monthChart"></canvas></div>
+    <div class="inline-share" id="inlineShare1"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-head"><h3>월별 수익률 히트맵</h3><span style="font-size:.6rem;color:var(--t4);font-family:'JetBrains Mono',monospace">연도 클릭 시 차트 반영</span></div>
+    <div style="padding:0"><div class="heatmap-wrap"><table class="hm"><thead><tr><th>연도</th><th>1월</th><th>2월</th><th>3월</th><th>4월</th><th>5월</th><th>6월</th><th>7월</th><th>8월</th><th>9월</th><th>10월</th><th>11월</th><th>12월</th></tr></thead><tbody id="hmBody"></tbody><tfoot id="hmFoot"></tfoot></table></div></div>
+    <div class="inline-share" id="inlineShare2"></div>
+  </div>
+  <div id="shareBarWrap"></div>
+</div>
+<script>
+var SHARE_URL='https://herdvibe.com/50';
+var KAKAO_KEY='a43ed7b39fac35458f4f9df925a279b5';
+var DATA_BASE='https://raw.githubusercontent.com/kittycapital/etf-seasonality/main/data/';
+var ASSETS=[
+  {id:'SPY',name:'S&P 500',sub:'미국 대형주',color:'#00ff88',cat:'미국 지수'},
+  {id:'QQQ',name:'Nasdaq 100',sub:'기술주',color:'#4488ff',cat:'미국 지수'},
+  {id:'DIA',name:'Dow Jones',sub:'우량주',color:'#ffcc00',cat:'미국 지수'},
+  {id:'IWM',name:'Russell 2000',sub:'소형주',color:'#ff8844',cat:'미국 지수'},
+  {id:'ARKK',name:'ARK Innovation',sub:'혁신기술',color:'#cc44ff',cat:'테마/섹터'},
+  {id:'SCHD',name:'Schwab 배당',sub:'배당주',color:'#ff66aa',cat:'테마/섹터'},
+  {id:'XLE',name:'Energy',sub:'에너지',color:'#44cc44',cat:'테마/섹터'},
+  {id:'EWY',name:'Korea',sub:'한국 주식',color:'#ff4466',cat:'해외'},
+  {id:'EEM',name:'EM',sub:'신흥국',color:'#aa66ff',cat:'해외'},
+  {id:'TLT',name:'미국 장기채',sub:'20년+ 국채',color:'#00ccee',cat:'채권/원자재'},
+  {id:'GLD',name:'Gold',sub:'금',color:'#ffd700',cat:'채권/원자재'},
+  {id:'SLV',name:'Silver',sub:'은',color:'#c0c0c0',cat:'채권/원자재'},
+  {id:'USO',name:'Oil',sub:'원유',color:'#8b6914',cat:'채권/원자재'},
+  {id:'BTC_USD',name:'Bitcoin',sub:'BTC',color:'#f7931a',cat:'암호화폐'},
+  {id:'ETH_USD',name:'Ethereum',sub:'ETH',color:'#627eea',cat:'암호화폐'}
+];
+var MONTH_KR=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+var currentAsset='SPY',selectedYear=null,dataCache={},chart=null;
+
+function ensureKakao(){try{if(typeof Kakao!=='undefined'&&!Kakao.isInitialized())Kakao.init(KAKAO_KEY);return typeof Kakao!=='undefined'&&Kakao.isInitialized();}catch(e){return false;}}
+function copyToClipboard(t){try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t);}else{var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}try{window.parent.postMessage({type:'clipboard',text:t},'*');}catch(e){}}catch(e){}}
+function openUrlSafe(url){try{var a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);},100);}catch(e){window.open(url,'_blank');}}
+function flashCopied(btn){if(!btn)return;var orig=btn.innerHTML;btn.style.background='#22c55e';btn.style.color='#fff';btn.style.borderColor='#22c55e';var hl=btn.querySelector('.lbl');btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg>'+(hl?'<span class="lbl" style="color:#fff">복사됨!</span>':'');setTimeout(function(){btn.style.background='';btn.style.color='';btn.style.borderColor='';btn.innerHTML=orig;},2000);}
+function kakaoShare(title){if(!ensureKakao()){copyToClipboard(SHARE_URL);showToast('링크 복사완료!');return;}try{Kakao.Share.sendDefault({objectType:'feed',content:{title:title||document.title,description:'글로벌 자산 월별 시즌널리티 분석',imageUrl:'https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}},buttons:[{title:'대시보드 보기',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}]});}catch(e){copyToClipboard(SHARE_URL);showToast('링크 복사완료!');}}
+function showToast(msg){var w=document.querySelector('.toast-wrap');if(!w){w=document.createElement('div');w.className='toast-wrap';document.body.appendChild(w);}var t=document.createElement('div');t.className='toast';t.textContent=msg;w.appendChild(t);setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(12px)';t.style.transition='.3s';setTimeout(function(){t.remove();},300);},3000);}
+function doShare(p,btn){var a=ASSETS.find(function(x){return x.id===currentAsset;});var title=(a?a.name:'자산')+' 시즌널리티 분석 — herdvibe.com';switch(p){case'twitter':openUrlSafe('https://twitter.com/intent/tweet?text='+encodeURIComponent(title)+'&url='+encodeURIComponent(SHARE_URL));break;case'telegram':openUrlSafe('https://t.me/share/url?url='+encodeURIComponent(SHARE_URL)+'&text='+encodeURIComponent(title));break;case'kakao':kakaoShare(title);break;case'instagram':copyToClipboard(SHARE_URL);flashCopied(btn);showToast('링크 복사완료! 인스타그램에 붙여넣기 하세요');break;case'link':copyToClipboard(SHARE_URL);flashCopied(btn);showToast('링크가 복사되었습니다');break;}}
+var xI='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>';
+var kI='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.112 4.508 6.458l-1.148 4.265a.5.5 0 0 0 .764.533l4.94-3.26c.304.02.612.03.936.03 5.523 0 10-3.462 10-7.735C22 6.463 17.523 3 12 3z"/></svg>';
+var tI='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>';
+var iI='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>';
+var lI='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+function makeInlineShare(el){el.innerHTML='<span class="lbl">공유</span><button class="share-btn share-btn--x" onclick="doShare(\'twitter\',this)">'+xI+'</button><button class="share-btn share-btn--kakao" onclick="doShare(\'kakao\',this)">'+kI+'</button><button class="share-btn share-btn--tg" onclick="doShare(\'telegram\',this)">'+tI+'</button><button class="share-btn share-btn--copy" onclick="doShare(\'link\',this)">'+lI+'</button>';}
+function makeShareBar(el){var a=ASSETS.find(function(x){return x.id===currentAsset;});el.innerHTML='<div class="share-bar"><div class="share-bar-preview"><b>'+(a?a.name:'자산')+' 시즌널리티 분석</b> — herdvibe.com</div><div class="share-bar-buttons"><button class="share-btn share-btn--x" onclick="doShare(\'twitter\',this)">'+xI+'<span class="lbl">트위터</span></button><button class="share-btn share-btn--kakao" onclick="doShare(\'kakao\',this)">'+kI+'<span class="lbl">카카오톡</span></button><button class="share-btn share-btn--tg" onclick="doShare(\'telegram\',this)">'+tI+'<span class="lbl">텔레그램</span></button><button class="share-btn share-btn--ig" onclick="doShare(\'instagram\',this)">'+iI+'<span class="lbl">인스타</span></button><button class="share-btn share-btn--copy" onclick="doShare(\'link\',this)">'+lI+'<span class="lbl">링크 복사</span></button></div></div>';}
+
+function renderTabs(){
+  var wrap=document.getElementById('assetTabs');
+  var html='';ASSETS.forEach(function(a){html+='<div class="atab'+(a.id===currentAsset?' on':'')+'" data-id="'+a.id+'"><div class="atab-icon" style="background:'+a.color+'">'+a.id.replace('_USD','').slice(0,3)+'</div><div class="atab-info"><span class="atab-name">'+a.name+'</span><span class="atab-sub">'+a.sub+'</span></div></div>';});
+  wrap.innerHTML=html;
+  wrap.querySelectorAll('.atab').forEach(function(tab){tab.addEventListener('click',function(){currentAsset=tab.dataset.id;selectedYear=null;wrap.querySelectorAll('.atab').forEach(function(t){t.classList.remove('on');});tab.classList.add('on');updateAll();});});
+}
+
+async function loadData(id){
+  if(dataCache[id])return dataCache[id];
+  try{var r=await fetch(DATA_BASE+id+'.csv');var text=await r.text();var lines=text.trim().split('\n');var data=[];for(var i=1;i<lines.length;i++){var p=lines[i].split(',');var price=parseFloat(p[1]);if(!isNaN(price)&&p[0]){data.push({date:new Date(p[0].replace(' UTC','')),price:price});}}data.sort(function(a,b){return a.date-b.date;});dataCache[id]=data;return data;}catch(e){console.error('Load failed:',id,e);return[];}
+}
+function calcMonthlyReturns(data){
+  var md={};data.forEach(function(d){var y=d.date.getFullYear(),m=d.date.getMonth(),day=d.date.getDate();var k=y+'-'+m;if(!md[k])md[k]={year:y,month:m,days:{}};md[k].days[day]=d.price;});
+  var ret=[];for(var k in md){var m=md[k];var days=Object.keys(m.days).map(Number).sort(function(a,b){return a-b;});if(days.length>=2){var o=m.days[days[0]],c=m.days[days[days.length-1]];ret.push({year:m.year,month:m.month,return:((c-o)/o)*100});}}return ret;
+}
+function getMonthHistory(data,targetMonth){
+  var md={};var curYear=new Date().getFullYear();var firstPrice=null;
+  data.forEach(function(d){var y=d.date.getFullYear(),m=d.date.getMonth(),day=d.date.getDate();if(m===targetMonth){if(!md[y])md[y]={};md[y][day]=d.price;}});
+  if(md[curYear]){var cd=Object.keys(md[curYear]).map(Number).sort(function(a,b){return a-b;});if(cd.length>0)firstPrice=md[curYear][cd[0]];}
+  var results=[];for(var y in md){var days=md[y];var dn=Object.keys(days).map(Number).sort(function(a,b){return a-b;});if(dn.length>=2){var fp=days[dn[0]];var norm=dn.map(function(day,idx){var r=((days[day]-fp)/fp)*100;return{day:idx+1,calDay:day,return:r,price:firstPrice?firstPrice*(1+r/100):days[day]};});results.push({year:parseInt(y),data:norm,totalReturn:norm[norm.length-1].return,tradingDays:norm.length});}}
+  return results.sort(function(a,b){return a.year-b.year;});
+}
+
+Chart.defaults.color='#555';Chart.defaults.borderColor='rgba(255,255,255,0.06)';Chart.defaults.font.family="'Noto Sans KR',sans-serif";
+var wmPlugin={id:'herdvibeWM',beforeDraw:function(c){var ctx=c.ctx,ca=c.chartArea;if(!ca)return;ctx.save();ctx.font='700 34px "Plus Jakarta Sans",sans-serif';ctx.fillStyle='rgba(255,255,255,0.035)';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Herdvibe.com',(ca.left+ca.right)/2,(ca.top+ca.bottom)/2);ctx.restore();}};
+function renderChart(histData,curMonth){
+  var ctx=document.getElementById('monthChart').getContext('2d');if(chart)chart.destroy();
+  var curYear=new Date().getFullYear();var bestY=null,worstY=null,bestR=-Infinity,worstR=Infinity;
+  histData.forEach(function(yd){if(yd.totalReturn>bestR){bestR=yd.totalReturn;bestY=yd.year;}if(yd.totalReturn<worstR){worstR=yd.totalReturn;worstY=yd.year;}});
+  var maxTD=Math.max.apply(null,histData.map(function(y){return y.tradingDays;}));
+  var avgD=[];for(var i=0;i<maxTD;i++){var s=0,c=0;histData.forEach(function(yd){if(yd.data[i]){s+=yd.data[i].return;c++;}});if(c>0)avgD.push({x:i+1,y:s/c});}
+  var ds=[];
+  histData.forEach(function(yd){if(yd.year!==bestY&&yd.year!==worstY&&yd.year!==curYear&&yd.year!==selectedYear){ds.push({label:yd.year+'',data:yd.data.map(function(d){return{x:d.day,y:d.return,price:d.price,calDay:d.calDay};}),borderColor:'rgba(255,255,255,0.1)',borderWidth:1.5,fill:false,tension:.3,pointRadius:0,pointHoverRadius:4});}});
+  ds.push({label:'평균',data:avgD,borderColor:'#888',borderWidth:2,borderDash:[5,5],fill:false,tension:.3,pointRadius:0});
+  if(selectedYear){var sd=histData.find(function(y){return y.year===selectedYear;});if(sd)ds.push({label:selectedYear+' (선택)',data:sd.data.map(function(d){return{x:d.day,y:d.return,price:d.price,calDay:d.calDay};}),borderColor:'#60a5fa',borderWidth:3,fill:false,tension:.3,pointRadius:0});}
+  var wd=histData.find(function(y){return y.year===worstY;});if(wd)ds.push({label:worstY+' (역대 최저)',data:wd.data.map(function(d){return{x:d.day,y:d.return,price:d.price,calDay:d.calDay};}),borderColor:'#ff4466',borderWidth:2.5,fill:false,tension:.3,pointRadius:0});
+  var bd=histData.find(function(y){return y.year===bestY;});if(bd)ds.push({label:bestY+' (역대 최고)',data:bd.data.map(function(d){return{x:d.day,y:d.return,price:d.price,calDay:d.calDay};}),borderColor:'#00ff88',borderWidth:2.5,fill:false,tension:.3,pointRadius:0});
+  var cd2=histData.find(function(y){return y.year===curYear;});if(cd2)ds.push({label:curYear+' (현재)',data:cd2.data.map(function(d){return{x:d.day,y:d.return,price:d.price,calDay:d.calDay};}),borderColor:'#ffcc00',borderWidth:3,fill:false,tension:.3,pointRadius:2,pointBackgroundColor:'#ffcc00'});
+  function fP(p){return p>=1000?'$'+p.toLocaleString('en-US',{maximumFractionDigits:0}):p>=1?'$'+p.toFixed(2):'$'+p.toFixed(4);}
+  chart=new Chart(ctx,{type:'line',plugins:[wmPlugin],data:{datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(10,10,10,.95)',titleColor:'#e8e8f0',bodyColor:'#8888a0',borderColor:'rgba(255,255,255,.08)',borderWidth:1,padding:12,callbacks:{title:function(it){if(it.length>0){var raw=it[0].raw;var dayLabel=raw&&raw.calDay?(curMonth+1)+'월 '+raw.calDay+'일':'거래일 '+Math.round(it[0].parsed.x);return dayLabel;}return '';},label:function(ctx){var v=ctx.parsed.y,s=v>=0?'+':'';var pr=ctx.raw&&ctx.raw.price!==undefined?' ('+fP(ctx.raw.price)+')':'';return' '+ctx.dataset.label+': '+s+v.toFixed(2)+'%'+pr;}}}},scales:{x:{type:'linear',min:1,max:maxTD>0?maxTD:23,title:{display:true,text:'거래일',color:'#888'},grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#888',stepSize:5}},y:{title:{display:true,text:'수익률 (%)',color:'#888'},grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#888',callback:function(v){return(v>=0?'+':'')+v+'%';}}}}}});
+}
+
+function renderHeatmap(returns,curMonth){
+  var tbody=document.getElementById('hmBody'),tfoot=document.getElementById('hmFoot');tbody.innerHTML='';tfoot.innerHTML='';
+  var yd={};returns.forEach(function(r){if(!yd[r.year])yd[r.year]={};yd[r.year][r.month]=r.return;});
+  var years=Object.keys(yd).map(Number).sort(function(a,b){return b-a;});var curYear=new Date().getFullYear();
+  var stats={best:{},worst:{},avg:{}};
+  for(var m=0;m<12;m++){var vals=[];years.forEach(function(y){if(y!==curYear&&yd[y][m]!==undefined)vals.push(yd[y][m]);});if(vals.length>0){stats.best[m]=Math.max.apply(null,vals);stats.worst[m]=Math.min.apply(null,vals);stats.avg[m]=vals.reduce(function(a,b){return a+b;},0)/vals.length;}}
+  years.forEach(function(year){
+    var row=document.createElement('tr');row.dataset.year=year;
+    var yc=document.createElement('td');yc.className='yr';yc.textContent=year;row.appendChild(yc);
+    for(var m=0;m<12;m++){var cell=document.createElement('td');var v=yd[year][m];if(v!==undefined){var sp=document.createElement('span');sp.className='hmc';if(v>0){sp.classList.add('pos');sp.textContent='+'+v.toFixed(1)+'%';}else if(v<0){sp.classList.add('neg');sp.textContent=v.toFixed(1)+'%';}else{sp.classList.add('zero');sp.textContent='0.0%';}if(m===curMonth&&year===curYear)sp.classList.add('now');cell.appendChild(sp);}row.appendChild(cell);}
+    row.addEventListener('click',function(){var was=row.classList.contains('sel');document.querySelectorAll('.hm tr.sel').forEach(function(r){r.classList.remove('sel');});if(was){selectedYear=null;}else{row.classList.add('sel');selectedYear=parseInt(row.dataset.year);}updateAll();});
+    tbody.appendChild(row);
+  });
+  [{k:'best',l:'최고',c:'sbst'},{k:'worst',l:'최저',c:'swst'},{k:'avg',l:'평균',c:'savg'}].forEach(function(st){var row=document.createElement('tr');var lc=document.createElement('td');lc.className='slbl '+st.c;lc.textContent=st.l;row.appendChild(lc);for(var m=0;m<12;m++){var cell=document.createElement('td');cell.className=st.c;var v=stats[st.k][m];if(v!==undefined)cell.textContent=(v>=0?'+':'')+v.toFixed(1)+'%';row.appendChild(cell);}tfoot.appendChild(row);});
+}
+
+async function updateAll(){
+  var data=await loadData(currentAsset);if(!data.length)return;
+  var curMonth=new Date().getMonth();
+  document.getElementById('curYear').textContent=new Date().getFullYear();
+  var a=ASSETS.find(function(x){return x.id===currentAsset;});
+  document.getElementById('chartTitle').textContent=(a?a.name:currentAsset)+' '+MONTH_KR[curMonth]+', 과거엔 어땠을까?';
+  renderChart(getMonthHistory(data,curMonth),curMonth);
+  renderHeatmap(calcMonthlyReturns(data),curMonth);
+  makeInlineShare(document.getElementById('inlineShare1'));
+  makeInlineShare(document.getElementById('inlineShare2'));
+  makeShareBar(document.getElementById('shareBarWrap'));
+}
+
+(function(){var lastH=0;setInterval(function(){if(window.parent!==window){var h=document.body.scrollHeight;if(h!==lastH){lastH=h;window.parent.postMessage({type:'resize',height:h},'*');}}},300);})();
+
+document.addEventListener('DOMContentLoaded',function(){renderTabs();updateAll();});
+</script>
+</body>
+</html>
