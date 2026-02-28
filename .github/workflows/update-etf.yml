@@ -23,10 +23,13 @@ jobs:
           python-version: '3.11'
 
       - name: 의존성 설치
-        run: pip install yfinance pandas
+        run: pip install yfinance pandas requests
 
-      - name: ETF 데이터 업데이트
+      - name: ETF 데이터 업데이트 (yfinance)
         run: python update_data.py
+
+      - name: BTC 초기 데이터 백필 (2009~2014)
+        run: python backfill_btc.py
 
       - name: 변경사항 커밋 & 푸시
         run: |
