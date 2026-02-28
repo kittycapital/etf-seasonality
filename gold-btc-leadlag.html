@@ -487,7 +487,7 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>시차 적용 오버레이</h2>
-                    <div class="subtitle" id="overlaySubtitle">52주 롤링 수익률 Z-Score · 금을 N주 앞당김</div>
+                    <div class="subtitle" id="overlaySubtitle">롤링 Z-Score (104주 윈도우) · 금을 N주 앞당김</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
@@ -943,7 +943,7 @@
             buildCorrChart(cc, best.lag);
         }
 
-        // ─── CHART 2: Overlay (Z-Score Normalized) ───
+        // ─── CHART 2: Overlay (Rolling Z-Score Normalized) ───
         function buildOverlayChart(lag) {
             const ctx = document.getElementById('overlayChart').getContext('2d');
             if (overlayChart) overlayChart.destroy();
@@ -963,22 +963,36 @@
                 rollDates.push(alignedDates[i]);
             }
 
-            // Z-Score normalize each series
-            function zScore(arr) {
-                const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-                const std = Math.sqrt(arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length);
-                return arr.map(v => std > 0 ? (v - mean) / std : 0);
+            // Rolling Z-Score: each point normalized against prior 104w (2yr) window
+            function rollingZScore(arr, window) {
+                const result = [];
+                for (let i = 0; i < arr.length; i++) {
+                    if (i < window) {
+                        result.push(null); // not enough history
+                        continue;
+                    }
+                    const slice = arr.slice(i - window, i);
+                    const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+                    const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / slice.length);
+                    result.push(std > 0.001 ? (arr[i] - mean) / std : 0);
+                }
+                return result;
             }
 
-            const btcZ = zScore(btcRollRaw);
-            const goldZ = zScore(goldRollRaw);
+            const zWindow = 104; // 2 years lookback
+            const btcZ = rollingZScore(btcRollRaw, zWindow);
+            const goldZ = rollingZScore(goldRollRaw, zWindow);
 
-            // BTC Z-Score data points
-            const btcData = btcZ.map((z, i) => ({ x: rollDates[i].getTime(), y: z }));
+            // BTC Z-Score data points (skip nulls)
+            const btcData = [];
+            for (let i = 0; i < btcZ.length; i++) {
+                if (btcZ[i] !== null) btcData.push({ x: rollDates[i].getTime(), y: btcZ[i] });
+            }
 
-            // Gold Z-Score data points — shifted by lag weeks
+            // Gold Z-Score data points — shifted by lag weeks (skip nulls)
             const goldData = [];
             for (let i = 0; i < goldZ.length; i++) {
+                if (goldZ[i] === null) continue;
                 const shiftedIdx = i + lag;
                 if (shiftedIdx < rollDates.length) {
                     goldData.push({ x: rollDates[shiftedIdx].getTime(), y: goldZ[i] });
@@ -992,7 +1006,7 @@
             if (found) corrAtLag = found.corr;
 
             document.getElementById('overlaySubtitle').textContent =
-                `52주 롤링 수익률 Z-Score · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
+                `롤링 Z-Score (104주 윈도우) · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
 
             overlayChart = new Chart(ctx, {
                 type: 'line',
@@ -1063,7 +1077,7 @@
                                 callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'σ'
                             },
                             title: {
-                                display: true, text: 'Z-Score (52주 롤링 수익률)',
+                                display: true, text: 'Z-Score (104주 롤링)',
                                 color: '#666', font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
