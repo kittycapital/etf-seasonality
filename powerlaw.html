@@ -344,7 +344,9 @@
             .stat-value { font-size: 1rem; }
             .legend-item { font-size: 0.58rem; gap: 4px; }
             .legend-line { width: 14px; }
-            .share-btn { padding: 7px 10px; font-size: 0.7rem; }
+            .share-section { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+            .share-btn { padding: 8px 4px; font-size: 0.65rem; justify-content: center; }
+            .share-btn svg { width: 12px; height: 12px; }
         }
     </style>
 </head>
@@ -709,15 +711,16 @@
                 id: 'watermark',
                 afterDraw(chart) {
                     const ctx = chart.ctx;
+                    const area = chart.chartArea;
+                    const w = area.right - area.left;
+                    const fontSize = Math.max(16, Math.min(42, w * 0.07));
                     ctx.save();
                     ctx.globalAlpha = 0.07;
-                    ctx.font = '700 42px JetBrains Mono';
+                    ctx.font = `700 ${fontSize}px JetBrains Mono`;
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    const cx = (chart.chartArea.left + chart.chartArea.right) / 2;
-                    const cy = (chart.chartArea.top + chart.chartArea.bottom) / 2;
-                    ctx.fillText('Herdvibe.com', cx, cy);
+                    ctx.fillText('Herdvibe.com', (area.left + area.right) / 2, (area.top + area.bottom) / 2);
                     ctx.restore();
                 }
             };
