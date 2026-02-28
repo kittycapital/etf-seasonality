@@ -594,17 +594,24 @@
             let weekStart = null, weekData = [];
             data.forEach(d => {
                 const wk = new Date(d.date);
-                wk.setDate(wk.getDate() - wk.getDay());
+                wk.setDate(wk.getDate() - wk.getDay()); // Sunday of the week
                 const key = wk.toISOString().slice(0, 10);
                 if (weekStart !== key) {
-                    if (weekData.length > 0) weekly.push(weekData[weekData.length - 1]);
+                    if (weekData.length > 0) {
+                        const last = weekData[weekData.length - 1];
+                        // Use the week's Sunday as the canonical date for alignment
+                        weekly.push({ date: new Date(weekStart + 'T00:00:00Z'), price: last.price, weekKey: weekStart });
+                    }
                     weekStart = key;
                     weekData = [d];
                 } else {
                     weekData.push(d);
                 }
             });
-            if (weekData.length > 0) weekly.push(weekData[weekData.length - 1]);
+            if (weekData.length > 0) {
+                const last = weekData[weekData.length - 1];
+                weekly.push({ date: new Date(weekStart + 'T00:00:00Z'), price: last.price, weekKey: weekStart });
+            }
             return weekly;
         }
 
@@ -614,22 +621,22 @@
             for (let i = 1; i < weekly.length; i++) {
                 returns.push({
                     date: weekly[i].date,
+                    weekKey: weekly[i].weekKey,
                     ret: (weekly[i].price - weekly[i - 1].price) / weekly[i - 1].price
                 });
             }
             return returns;
         }
 
-        // ─── ALIGN BY DATE ───
+        // ─── ALIGN BY WEEK KEY ───
         function alignReturns(r1, r2) {
             const map2 = {};
-            r2.forEach(d => { map2[d.date.toISOString().slice(0, 10)] = d.ret; });
+            r2.forEach(d => { map2[d.weekKey] = d.ret; });
             const aligned1 = [], aligned2 = [], dates = [];
             r1.forEach(d => {
-                const key = d.date.toISOString().slice(0, 10);
-                if (map2[key] !== undefined) {
+                if (map2[d.weekKey] !== undefined) {
                     aligned1.push(d.ret);
-                    aligned2.push(map2[key]);
+                    aligned2.push(map2[d.weekKey]);
                     dates.push(d.date);
                 }
             });
