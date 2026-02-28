@@ -7,7 +7,7 @@
 
     <!-- Open Graph -->
     <meta property="og:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
-    <meta property="og:description" content="금 가격이 비트코인을 얼마나 먼저 예고하는가? Cross-Correlation 및 시차 오버레이 분석">
+    <meta property="og:description" content="Gold/BTC 비율 변화가 비트코인 가격을 얼마나 먼저 예고하는가? Cross-Correlation 및 Z-Score 오버레이 분석">
     <meta property="og:url" content="https://herdvibe.com/113">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="HerdVibe">
@@ -15,7 +15,7 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
-    <meta name="twitter:description" content="금 가격이 비트코인을 얼마나 먼저 예고하는가? Cross-Correlation 및 시차 오버레이 분석">
+    <meta name="twitter:description" content="Gold/BTC 비율 변화가 비트코인 가격을 얼마나 먼저 예고하는가? Cross-Correlation 및 Z-Score 오버레이 분석">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -432,7 +432,7 @@
     <div class="container">
         <header class="header">
             <h1>금-비트코인 선행성 분석</h1>
-            <p>Gold-BTC Lead-Lag · 금 가격이 비트코인을 얼마나 먼저 예고하는가?</p>
+            <p>Gold/BTC Ratio Lead-Lag · Gold/BTC 비율 변화가 BTC 가격을 얼마나 먼저 예고하는가?</p>
         </header>
 
         <!-- Stats -->
@@ -448,9 +448,9 @@
                 <div class="stat-sub" id="statCorrSub">--</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">금 최근 12주 변화</div>
+                <div class="stat-label">Gold/BTC 비율 Z-Score</div>
                 <div class="stat-value" id="statGoldChg">--</div>
-                <div class="stat-sub">GLD ETF 기준</div>
+                <div class="stat-sub">52주 롤링 기준</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">BTC 시그널</div>
@@ -463,8 +463,8 @@
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title-group">
-                    <h2>Cross-Correlation: 금 vs BTC</h2>
-                    <div class="subtitle">주간 수익률 기준 · Lag (+) = 금 선행, Lag (-) = BTC 선행</div>
+                    <h2>Cross-Correlation: Gold/BTC 비율 변화 → BTC 수익률</h2>
+                    <div class="subtitle">Gold/BTC 비율 주간 변화율 vs BTC 주간 수익률 · Lag (+) = 비율 변화 선행</div>
                 </div>
                 <div class="tab-row" id="corrTabs">
                     <button class="tab-btn active" data-period="all" onclick="switchCorrPeriod('all')">전체</button>
@@ -487,14 +487,14 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>시차 적용 오버레이</h2>
-                    <div class="subtitle" id="overlaySubtitle">롤링 Z-Score (104주 윈도우) · 금을 N주 앞당김</div>
+                    <div class="subtitle" id="overlaySubtitle">Gold/BTC 비율 Z-Score vs BTC 가격 Z-Score · 시차 적용</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC Z-Score
+                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 가격 Z-Score
                     </div>
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold Z-Score (시차 적용)
+                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold/BTC 비율 Z-Score (반전 · 시차)
                     </div>
                 </div>
             </div>
@@ -514,7 +514,7 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>롤링 최적 Lag 타임라인</h2>
-                    <div class="subtitle">52주 롤링 윈도우 기준 · 최적 선행 기간 변화 추적</div>
+                    <div class="subtitle">104주 롤링 윈도우 · Gold/BTC 비율 변화 → BTC 수익률 선행 기간 추적</div>
                 </div>
             </div>
             <div class="chart-container-sm">
@@ -594,12 +594,11 @@
             let weekStart = null, weekData = [];
             data.forEach(d => {
                 const wk = new Date(d.date);
-                wk.setDate(wk.getDate() - wk.getDay()); // Sunday of the week
+                wk.setDate(wk.getDate() - wk.getDay());
                 const key = wk.toISOString().slice(0, 10);
                 if (weekStart !== key) {
                     if (weekData.length > 0) {
                         const last = weekData[weekData.length - 1];
-                        // Use the week's Sunday as the canonical date for alignment
                         weekly.push({ date: new Date(weekStart + 'T00:00:00Z'), price: last.price, weekKey: weekStart });
                     }
                     weekStart = key;
@@ -615,82 +614,70 @@
             return weekly;
         }
 
-        // ─── WEEKLY RETURNS ───
-        function weeklyReturns(weekly) {
-            const returns = [];
-            for (let i = 1; i < weekly.length; i++) {
-                returns.push({
-                    date: weekly[i].date,
-                    weekKey: weekly[i].weekKey,
-                    ret: (weekly[i].price - weekly[i - 1].price) / weekly[i - 1].price
-                });
-            }
-            return returns;
-        }
-
-        // ─── ALIGN BY WEEK KEY ───
-        function alignReturns(r1, r2) {
-            const map2 = {};
-            r2.forEach(d => { map2[d.weekKey] = d.ret; });
-            const aligned1 = [], aligned2 = [], dates = [];
-            r1.forEach(d => {
-                if (map2[d.weekKey] !== undefined) {
-                    aligned1.push(d.ret);
-                    aligned2.push(map2[d.weekKey]);
+        // ─── ALIGN WEEKLY PRICES BY WEEK KEY ───
+        function alignWeeklyPrices(gld, btc) {
+            const btcMap = {};
+            btc.forEach(d => { btcMap[d.weekKey] = d; });
+            const dates = [], gldPrices = [], btcPrices = [];
+            gld.forEach(d => {
+                if (btcMap[d.weekKey]) {
                     dates.push(d.date);
+                    gldPrices.push(d.price);
+                    btcPrices.push(btcMap[d.weekKey].price);
                 }
             });
-            return { r1: aligned1, r2: aligned2, dates };
+            return { dates, gldPrices, btcPrices };
         }
 
         // ─── CROSS-CORRELATION ───
-        function crossCorrelation(gold, btc, maxLag) {
-            const n = gold.length;
+        function crossCorrelation(series1, series2, maxLag) {
+            const n = series1.length;
+            const mean1 = series1.reduce((a, b) => a + b, 0) / n;
+            const mean2 = series2.reduce((a, b) => a + b, 0) / n;
+            const std1 = Math.sqrt(series1.reduce((a, b) => a + (b - mean1) ** 2, 0) / n);
+            const std2 = Math.sqrt(series2.reduce((a, b) => a + (b - mean2) ** 2, 0) / n);
             const results = [];
-
-            // Mean
-            const meanG = gold.reduce((a, b) => a + b, 0) / n;
-            const meanB = btc.reduce((a, b) => a + b, 0) / n;
-
-            // Std
-            const stdG = Math.sqrt(gold.reduce((a, b) => a + (b - meanG) ** 2, 0) / n);
-            const stdB = Math.sqrt(btc.reduce((a, b) => a + (b - meanB) ** 2, 0) / n);
-
             for (let lag = -maxLag; lag <= maxLag; lag++) {
                 let sum = 0, count = 0;
                 for (let i = 0; i < n; i++) {
                     const j = i + lag;
                     if (j >= 0 && j < n) {
-                        sum += (gold[i] - meanG) * (btc[j] - meanB);
+                        sum += (series1[i] - mean1) * (series2[j] - mean2);
                         count++;
                     }
                 }
-                const corr = count > 10 ? sum / (count * stdG * stdB) : 0;
-                results.push({ lag, corr });
+                results.push({ lag, corr: count > 10 ? sum / (count * std1 * std2) : 0 });
             }
             return results;
         }
 
         // ─── ROLLING OPTIMAL LAG ───
-        function rollingOptimalLag(gold, btc, dates, windowSize, maxLag) {
+        function rollingOptimalLag(s1, s2, dates, windowSize, maxLag) {
             const results = [];
-            for (let i = windowSize; i < gold.length; i++) {
-                const gSlice = gold.slice(i - windowSize, i);
-                const bSlice = btc.slice(i - windowSize, i);
-                const cc = crossCorrelation(gSlice, bSlice, Math.min(maxLag, Math.floor(windowSize / 3)));
-
-                // Only positive lags (gold leads)
+            for (let i = windowSize; i < s1.length; i++) {
+                const slice1 = s1.slice(i - windowSize, i);
+                const slice2 = s2.slice(i - windowSize, i);
+                const cc = crossCorrelation(slice1, slice2, Math.min(maxLag, Math.floor(windowSize / 3)));
+                // Find best absolute correlation at positive lag (ratio leads)
                 const posLags = cc.filter(c => c.lag >= 0);
                 let best = posLags[0];
-                posLags.forEach(c => { if (c.corr > best.corr) best = c; });
-
-                results.push({
-                    date: dates[i],
-                    optimalLag: best.lag,
-                    corr: best.corr
-                });
+                posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
+                results.push({ date: dates[i], optimalLag: best.lag, corr: best.corr });
             }
             return results;
+        }
+
+        // ─── ROLLING Z-SCORE ───
+        function rollingZScore(arr, window) {
+            const result = [];
+            for (let i = 0; i < arr.length; i++) {
+                if (i < window) { result.push(null); continue; }
+                const slice = arr.slice(i - window, i);
+                const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+                const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / slice.length);
+                result.push(std > 0.001 ? (arr[i] - mean) / std : 0);
+            }
+            return result;
         }
 
         // ─── WATERMARK PLUGIN ───
@@ -714,7 +701,8 @@
 
         // ─── GLOBAL STATE ───
         let corrChart, overlayChart, rollingChart;
-        let goldReturns, btcReturns, alignedGold, alignedBtc, alignedDates;
+        let ratioChanges, btcReturns, alignedDates;
+        let ratioPrices, btcPricesAligned, gldPricesAligned;
         let currentOptimalLag = 12;
         let corrPeriodData = {};
 
@@ -730,76 +718,90 @@
                 return;
             }
 
-            // Weekly returns
             const btcWeekly = toWeekly(btcRaw);
             const gldWeekly = toWeekly(gldRaw);
-            const btcRet = weeklyReturns(btcWeekly);
-            const gldRet = weeklyReturns(gldWeekly);
 
-            // Align
-            const aligned = alignReturns(gldRet, btcRet);
-            alignedGold = aligned.r1;
-            alignedBtc = aligned.r2;
-            alignedDates = aligned.dates;
+            // Align weekly prices
+            const aligned = alignWeeklyPrices(gldWeekly, btcWeekly);
+            gldPricesAligned = aligned.gldPrices;
+            btcPricesAligned = aligned.btcPrices;
+
+            // Compute Gold/BTC ratio
+            ratioPrices = gldPricesAligned.map((g, i) => g / btcPricesAligned[i]);
+
+            // Weekly changes: ratio change and BTC return (start from index 1)
+            ratioChanges = [];
+            btcReturns = [];
+            alignedDates = [];
+            for (let i = 1; i < ratioPrices.length; i++) {
+                ratioChanges.push((ratioPrices[i] - ratioPrices[i - 1]) / ratioPrices[i - 1]);
+                btcReturns.push((btcPricesAligned[i] - btcPricesAligned[i - 1]) / btcPricesAligned[i - 1]);
+                alignedDates.push(aligned.dates[i]);
+            }
 
             // Prepare period subsets
-            const now = alignedDates[alignedDates.length - 1];
             const periods = { all: 0, '5y': 260, '3y': 156, '1y': 52 };
             for (const [key, weeks] of Object.entries(periods)) {
-                const startIdx = weeks === 0 ? 0 : Math.max(0, alignedGold.length - weeks);
+                const startIdx = weeks === 0 ? 0 : Math.max(0, ratioChanges.length - weeks);
                 corrPeriodData[key] = {
-                    gold: alignedGold.slice(startIdx),
-                    btc: alignedBtc.slice(startIdx),
+                    ratio: ratioChanges.slice(startIdx),
+                    btc: btcReturns.slice(startIdx),
                     dates: alignedDates.slice(startIdx)
                 };
             }
 
-            // Full cross-correlation
-            const cc = crossCorrelation(alignedGold, alignedBtc, MAX_LAG);
+            // Full cross-correlation: ratio change → BTC return
+            const cc = crossCorrelation(ratioChanges, btcReturns, MAX_LAG);
 
-            // Find optimal positive lag
+            // Find best absolute correlation at positive lag
             const posLags = cc.filter(c => c.lag >= 0);
             let best = posLags[0];
-            posLags.forEach(c => { if (c.corr > best.corr) best = c; });
+            posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
             currentOptimalLag = best.lag;
 
             // Update stats
             document.getElementById('statLag').textContent = best.lag + '주';
-            document.getElementById('statLagSub').textContent = `금이 BTC보다 ${best.lag}주 선행`;
+            document.getElementById('statLagSub').textContent = best.corr < 0
+                ? `비율↑ → ${best.lag}주 후 BTC↑ (역상관)`
+                : `비율↑ → ${best.lag}주 후 BTC 동조`;
 
             const corrEl = document.getElementById('statCorr');
             corrEl.textContent = best.corr.toFixed(3);
-            corrEl.className = 'stat-value ' + (best.corr >= 0.3 ? 'positive' : best.corr >= 0.1 ? 'neutral' : 'negative');
+            const absCor = Math.abs(best.corr);
+            corrEl.className = 'stat-value ' + (absCor >= 0.3 ? 'positive' : absCor >= 0.1 ? 'neutral' : 'negative');
             document.getElementById('statCorrSub').textContent =
-                best.corr >= 0.5 ? '강한 상관' : best.corr >= 0.3 ? '유의미한 상관' : best.corr >= 0.1 ? '약한 상관' : '무상관';
+                absCor >= 0.5 ? '강한 상관' : absCor >= 0.3 ? '유의미한 상관' : absCor >= 0.1 ? '약한 상관' : '무상관';
 
-            // Gold recent 12w change
-            const gldRecent = gldWeekly.slice(-13);
-            if (gldRecent.length >= 2) {
-                const gldChg = (gldRecent[gldRecent.length - 1].price - gldRecent[0].price) / gldRecent[0].price * 100;
-                const gldEl = document.getElementById('statGoldChg');
-                gldEl.textContent = (gldChg >= 0 ? '+' : '') + gldChg.toFixed(1) + '%';
-                gldEl.className = 'stat-value ' + (gldChg >= 0 ? 'positive' : 'negative');
+            // Gold/BTC ratio 52w Z-Score
+            const ratioZ52 = rollingZScore(ratioPrices.slice(1), 52);
+            const currentRatioZ = ratioZ52[ratioZ52.length - 1];
+            if (currentRatioZ !== null) {
+                const zEl = document.getElementById('statGoldChg');
+                zEl.textContent = (currentRatioZ >= 0 ? '+' : '') + currentRatioZ.toFixed(2) + 'σ';
+                zEl.className = 'stat-value ' + (currentRatioZ >= 2 ? 'positive' : currentRatioZ <= -2 ? 'negative' : 'neutral');
             }
 
-            // BTC signal based on gold lead
+            // BTC signal
             const signalEl = document.getElementById('statSignal');
             const signalSubEl = document.getElementById('statSignalSub');
-            if (gldRecent.length >= 2) {
-                const gldChg = (gldRecent[gldRecent.length - 1].price - gldRecent[0].price) / gldRecent[0].price * 100;
-                if (gldChg > 5 && best.corr >= 0.2) {
-                    signalEl.textContent = '상승 예상';
+            if (currentRatioZ !== null && absCor >= 0.1) {
+                if (currentRatioZ >= 1.5) {
+                    signalEl.textContent = 'BTC 저평가';
                     signalEl.className = 'stat-value positive';
-                    signalSubEl.textContent = `금 ${best.lag}주 전 상승 반영`;
-                } else if (gldChg < -5 && best.corr >= 0.2) {
-                    signalEl.textContent = '하락 주의';
+                    signalSubEl.textContent = `Gold/BTC 비율 +${currentRatioZ.toFixed(1)}σ`;
+                } else if (currentRatioZ <= -1.5) {
+                    signalEl.textContent = 'BTC 고평가';
                     signalEl.className = 'stat-value negative';
-                    signalSubEl.textContent = `금 ${best.lag}주 전 하락 반영`;
+                    signalSubEl.textContent = `Gold/BTC 비율 ${currentRatioZ.toFixed(1)}σ`;
                 } else {
                     signalEl.textContent = '중립';
                     signalEl.className = 'stat-value neutral';
                     signalSubEl.textContent = '뚜렷한 방향성 없음';
                 }
+            } else {
+                signalEl.textContent = '중립';
+                signalEl.className = 'stat-value neutral';
+                signalSubEl.textContent = '뚜렷한 방향성 없음';
             }
 
             // ─── BUILD CHARTS ───
@@ -810,7 +812,6 @@
             buildOverlayChart(currentOptimalLag);
             buildRollingChart();
 
-            // Set slider
             document.getElementById('lagSlider').value = currentOptimalLag;
             document.getElementById('lagDisplay').textContent = currentOptimalLag + '주';
             document.getElementById('optimalBtn').textContent = `최적값 (${currentOptimalLag}주)`;
@@ -825,9 +826,8 @@
             const values = cc.map(c => c.corr);
             const colors = cc.map(c => {
                 if (c.lag === optimalLag) return 'rgba(212, 168, 67, 1)';
-                if (c.lag > 0) return c.corr > 0 ? 'rgba(0, 212, 170, 0.6)' : 'rgba(255, 71, 87, 0.4)';
-                if (c.lag < 0) return c.corr > 0 ? 'rgba(77, 171, 247, 0.5)' : 'rgba(255, 71, 87, 0.3)';
-                return 'rgba(255, 255, 255, 0.3)';
+                if (c.corr < 0) return c.lag > 0 ? 'rgba(0, 212, 170, 0.6)' : 'rgba(255, 71, 87, 0.4)';
+                return c.lag > 0 ? 'rgba(77, 171, 247, 0.5)' : 'rgba(255, 71, 87, 0.3)';
             });
 
             corrChart = new Chart(ctx, {
@@ -855,10 +855,15 @@
                             callbacks: {
                                 title: items => {
                                     const lag = items[0].label;
-                                    const dir = lag > 0 ? '금 선행' : lag < 0 ? 'BTC 선행' : '동시';
+                                    const dir = lag > 0 ? '비율 변화 선행' : lag < 0 ? 'BTC 선행' : '동시';
                                     return `Lag: ${lag}주 (${dir})`;
                                 },
-                                label: ctx => `상관계수: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(4)}`
+                                label: ctx => {
+                                    const v = ctx.parsed.y;
+                                    const sign = v >= 0 ? '+' : '';
+                                    const meaning = v < -0.05 ? ' · 역상관(비율↑→BTC↑)' : v > 0.05 ? ' · 동조(비율↑→BTC↓)' : '';
+                                    return `상관계수: ${sign}${v.toFixed(4)}${meaning}`;
+                                }
                             }
                         },
                         annotation: {
@@ -932,81 +937,53 @@
         function switchCorrPeriod(period) {
             document.querySelectorAll('#corrTabs .tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelector(`#corrTabs .tab-btn[data-period="${period}"]`).classList.add('active');
-
             const d = corrPeriodData[period];
-            const cc = crossCorrelation(d.gold, d.btc, MAX_LAG);
-
+            const cc = crossCorrelation(d.ratio, d.btc, MAX_LAG);
             const posLags = cc.filter(c => c.lag >= 0);
             let best = posLags[0];
-            posLags.forEach(c => { if (c.corr > best.corr) best = c; });
-
+            posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
             buildCorrChart(cc, best.lag);
         }
 
-        // ─── CHART 2: Overlay (Rolling Z-Score Normalized) ───
+        // ─── CHART 2: Overlay (Rolling Z-Score: Ratio inverted vs BTC price) ───
         function buildOverlayChart(lag) {
             const ctx = document.getElementById('overlayChart').getContext('2d');
             if (overlayChart) overlayChart.destroy();
 
-            const rollWindow = 52;
+            const zWindow = 104; // 2yr lookback
 
-            // Compute rolling 52w returns
-            const btcRollRaw = [], goldRollRaw = [], rollDates = [];
-            for (let i = rollWindow; i < alignedBtc.length; i++) {
-                let bCum = 1, gCum = 1;
-                for (let j = i - rollWindow; j < i; j++) {
-                    bCum *= (1 + alignedBtc[j]);
-                    gCum *= (1 + alignedGold[j]);
-                }
-                btcRollRaw.push((bCum - 1) * 100);
-                goldRollRaw.push((gCum - 1) * 100);
-                rollDates.push(alignedDates[i]);
-            }
+            // Gold/BTC ratio Z-Score (inverted: multiply by -1)
+            // High ratio = BTC cheap → inverted to low → matches BTC low price
+            const ratioZ = rollingZScore(ratioPrices.slice(1), zWindow);
+            const ratioZInv = ratioZ.map(v => v !== null ? -v : null);
 
-            // Rolling Z-Score: each point normalized against prior 104w (2yr) window
-            function rollingZScore(arr, window) {
-                const result = [];
-                for (let i = 0; i < arr.length; i++) {
-                    if (i < window) {
-                        result.push(null); // not enough history
-                        continue;
-                    }
-                    const slice = arr.slice(i - window, i);
-                    const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-                    const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / slice.length);
-                    result.push(std > 0.001 ? (arr[i] - mean) / std : 0);
-                }
-                return result;
-            }
+            // BTC price rolling Z-Score
+            const btcPriceZ = rollingZScore(btcPricesAligned.slice(1), zWindow);
 
-            const zWindow = 104; // 2 years lookback
-            const btcZ = rollingZScore(btcRollRaw, zWindow);
-            const goldZ = rollingZScore(goldRollRaw, zWindow);
-
-            // BTC Z-Score data points (skip nulls)
+            // Build data arrays
             const btcData = [];
-            for (let i = 0; i < btcZ.length; i++) {
-                if (btcZ[i] !== null) btcData.push({ x: rollDates[i].getTime(), y: btcZ[i] });
-            }
-
-            // Gold Z-Score data points — shifted by lag weeks (skip nulls)
             const goldData = [];
-            for (let i = 0; i < goldZ.length; i++) {
-                if (goldZ[i] === null) continue;
+            for (let i = 0; i < btcPriceZ.length; i++) {
+                if (btcPriceZ[i] !== null) {
+                    btcData.push({ x: alignedDates[i].getTime(), y: btcPriceZ[i] });
+                }
+            }
+            for (let i = 0; i < ratioZInv.length; i++) {
+                if (ratioZInv[i] === null) continue;
                 const shiftedIdx = i + lag;
-                if (shiftedIdx < rollDates.length) {
-                    goldData.push({ x: rollDates[shiftedIdx].getTime(), y: goldZ[i] });
+                if (shiftedIdx < alignedDates.length) {
+                    goldData.push({ x: alignedDates[shiftedIdx].getTime(), y: ratioZInv[i] });
                 }
             }
 
-            // Compute correlation at this lag
+            // Correlation at this lag from raw cross-corr
             let corrAtLag = 0;
-            const cc = crossCorrelation(alignedGold, alignedBtc, MAX_LAG);
+            const cc = crossCorrelation(ratioChanges, btcReturns, MAX_LAG);
             const found = cc.find(c => c.lag === lag);
             if (found) corrAtLag = found.corr;
 
             document.getElementById('overlaySubtitle').textContent =
-                `롤링 Z-Score (104주 윈도우) · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
+                `Gold/BTC 비율 Z-Score (반전) vs BTC 가격 Z-Score · ${lag}주 시프트 · 상관: ${corrAtLag.toFixed(3)}`;
 
             overlayChart = new Chart(ctx, {
                 type: 'line',
@@ -1014,7 +991,7 @@
                 data: {
                     datasets: [
                         {
-                            label: 'BTC Z-Score',
+                            label: 'BTC 가격 Z-Score',
                             data: btcData,
                             borderColor: '#f7931a',
                             borderWidth: 1.5,
@@ -1023,7 +1000,7 @@
                             fill: false
                         },
                         {
-                            label: `Gold Z-Score (${lag}주 시프트)`,
+                            label: `Gold/BTC 비율 Z-Score 반전 (${lag}주 시프트)`,
                             data: goldData,
                             borderColor: '#d4a843',
                             borderWidth: 1.5,
@@ -1099,10 +1076,10 @@
             buildOverlayChart(currentOptimalLag);
         }
 
-        // ─── CHART 3: Rolling ───
+        // ─── CHART 3: Rolling Optimal Lag ───
         function buildRollingChart() {
             const ctx = document.getElementById('rollingChart').getContext('2d');
-            const rolling = rollingOptimalLag(alignedGold, alignedBtc, alignedDates, 104, 26);
+            const rolling = rollingOptimalLag(ratioChanges, btcReturns, alignedDates, 104, 26);
 
             const lagData = rolling.map(d => ({ x: d.date.getTime(), y: d.optimalLag }));
             const corrData = rolling.map(d => ({ x: d.date.getTime(), y: d.corr }));
@@ -1182,7 +1159,7 @@
                         yCorr: {
                             type: 'linear',
                             position: 'right',
-                            min: -0.2, max: 0.8,
+                            min: -0.6, max: 0.6,
                             grid: { display: false },
                             ticks: {
                                 color: 'rgba(0,212,170,0.6)',
@@ -1199,6 +1176,7 @@
                 }
             });
         }
+
 
         // ─── SHARE (3-fallback for iframe) ───
         function openUrl(url) {
@@ -1250,7 +1228,7 @@
 
         function doShare(type) {
             const title = '금-비트코인 선행성 분석 | HerdVibe';
-            const text = '금 가격이 비트코인을 얼마나 먼저 예고하는가?';
+            const text = 'Gold/BTC 비율 변화가 비트코인을 얼마나 먼저 예고하는가?';
             const url = SHARE_URL;
 
             switch(type) {
