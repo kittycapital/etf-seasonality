@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>비트코인 Power Law | HerdVibe</title>
+    <title>비트코인 Power Law · 금 기반 밸류에이션 | HerdVibe</title>
 
     <!-- Open Graph -->
-    <meta property="og:title" content="비트코인 Power Law - 멱법칙 분석">
-    <meta property="og:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC 52주 Z-Score 분석">
+    <meta property="og:title" content="비트코인 Power Law · 금 기반 밸류에이션">
+    <meta property="og:description" content="BTC 가격 멱법칙 추세선/지지선 + 금 대비 BTC 52주 Z-Score 밸류에이션 분석">
     <meta property="og:url" content="https://herdvibe.com/112">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="HerdVibe">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="비트코인 Power Law - 멱법칙 분석">
-    <meta name="twitter:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC 52주 Z-Score 분석">
+    <meta name="twitter:title" content="비트코인 Power Law · 금 기반 밸류에이션">
+    <meta name="twitter:description" content="BTC 가격 멱법칙 추세선/지지선 + 금 대비 BTC 52주 Z-Score 밸류에이션 분석">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -359,8 +359,8 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>비트코인 Power Law</h1>
-            <p>BTC 가격 멱법칙 추세선·지지선 + Gold/BTC 52주 Z-Score</p>
+            <h1>비트코인 Power Law · 금 기반 밸류에이션</h1>
+            <p>BTC 가격 멱법칙 추세선·지지선 + 금 대비 BTC 52주 Z-Score</p>
         </header>
 
         <!-- Stats -->
@@ -381,7 +381,7 @@
                 <div class="stat-sub" id="statSupportDiff">--</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Gold/BTC Z-Score</div>
+                <div class="stat-label">금 대비 BTC Z-Score</div>
                 <div class="stat-value" id="statGoldBtc">--</div>
                 <div class="stat-sub" id="statGoldBtcLabel">52주 기준</div>
             </div>
@@ -420,17 +420,17 @@
         <div class="chart-card" style="padding-top:0; border-top-left-radius:0; border-top-right-radius:0; border-top:none;">
             <div class="chart-header" style="margin-bottom:8px;">
                 <div class="chart-title-group">
-                    <div class="subtitle">52주 Z-Score · Gold/BTC 비율 기반 Oversold / Overbought</div>
+                    <div class="subtitle">52주 Z-Score · 금 대비 BTC 밸류에이션 (고평가 / 저평가)</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
-                        <span class="legend-bar" style="background:var(--accent-orange)"></span>Gold/BTC Z
+                        <span class="legend-bar" style="background:var(--accent-orange)"></span>금 대비 BTC Z
                     </div>
                     <div class="legend-item">
-                        <span class="legend-bar" style="background:rgba(0,212,170,0.25); border:1px solid rgba(0,212,170,0.4)"></span>BTC Oversold
+                        <span class="legend-bar" style="background:rgba(255,71,87,0.25); border:1px solid rgba(255,71,87,0.4)"></span>BTC 고평가
                     </div>
                     <div class="legend-item">
-                        <span class="legend-bar" style="background:rgba(255,71,87,0.25); border:1px solid rgba(255,71,87,0.4)"></span>BTC Overbought
+                        <span class="legend-bar" style="background:rgba(0,212,170,0.25); border:1px solid rgba(0,212,170,0.4)"></span>BTC 저평가
                     </div>
                 </div>
             </div>
@@ -698,16 +698,17 @@
 
             if (goldBtcZWeekly.length > 0) {
                 const lastGBZ = goldBtcZWeekly[goldBtcZWeekly.length - 1];
+                const invertedZ = -lastGBZ.zScore;
                 const el = document.getElementById('statGoldBtc');
-                el.textContent = (lastGBZ.zScore >= 0 ? '+' : '') + lastGBZ.zScore.toFixed(2);
-                el.className = 'stat-value ' + (lastGBZ.zScore >= 0 ? 'positive' : 'negative');
+                el.textContent = (invertedZ >= 0 ? '+' : '') + invertedZ.toFixed(2);
+                el.className = 'stat-value ' + (invertedZ >= 0 ? 'negative' : 'positive');
                 const labelEl = document.getElementById('statGoldBtcLabel');
-                if (lastGBZ.zScore >= 2) {
-                    labelEl.textContent = 'BTC Oversold';
-                    labelEl.style.color = 'var(--accent-cyan)';
-                } else if (lastGBZ.zScore <= -2) {
-                    labelEl.textContent = 'BTC Overbought';
+                if (invertedZ >= 2) {
+                    labelEl.textContent = 'BTC 고평가 (금 대비)';
                     labelEl.style.color = 'var(--accent-red)';
+                } else if (invertedZ <= -2) {
+                    labelEl.textContent = 'BTC 저평가 (금 대비)';
+                    labelEl.style.color = 'var(--accent-cyan)';
                 } else {
                     labelEl.textContent = '중립 · 52주 기준';
                     labelEl.style.color = 'var(--text-secondary)';
@@ -754,7 +755,7 @@
                 d = new Date(d.getTime() + 7 * MS_PER_DAY);
             }
 
-            const goldBtcBarData = goldBtcZWeekly.map(d => ({ x: d.date.getTime(), y: d.zScore }));
+            const goldBtcBarData = goldBtcZWeekly.map(d => ({ x: d.date.getTime(), y: -d.zScore }));
 
             // ─── PEAK/TROUGH DETECTION ───
             function detectCycleLabels(zData, minDist, thresh) {
@@ -798,10 +799,10 @@
                         xValue: pt.x,
                         yValue: pt.y + (pt.type === 'peak' ? 0.7 : -0.7),
                         content: `${pt.type === 'peak' ? '▲' : '▼'} ${pt.y >= 0 ? '+' : ''}${pt.y.toFixed(1)}σ`,
-                        color: pt.type === 'peak' ? 'rgba(0,212,170,0.85)' : 'rgba(255,71,87,0.85)',
+                        color: pt.type === 'peak' ? 'rgba(255,71,87,0.85)' : 'rgba(0,212,170,0.85)',
                         font: { family: 'JetBrains Mono', size: 8, weight: '600' },
                         padding: { left: 3, right: 3, top: 2, bottom: 2 },
-                        backgroundColor: pt.type === 'peak' ? 'rgba(0,212,170,0.1)' : 'rgba(255,71,87,0.1)',
+                        backgroundColor: pt.type === 'peak' ? 'rgba(255,71,87,0.1)' : 'rgba(0,212,170,0.1)',
                         borderRadius: 3
                     };
                 });
@@ -921,11 +922,11 @@
                 data: {
                     datasets: [
                         {
-                            label: 'Gold/BTC Z-Score',
+                            label: '금 대비 BTC Z-Score',
                             data: goldBtcBarData,
                             backgroundColor: goldBtcBarData.map(d =>
-                                d.y >= 2 ? 'rgba(0,212,170,0.8)' :
-                                d.y <= -2 ? 'rgba(255,71,87,0.8)' :
+                                d.y >= 2 ? 'rgba(255,71,87,0.8)' :
+                                d.y <= -2 ? 'rgba(0,212,170,0.8)' :
                                 d.y >= 0 ? 'rgba(255,107,53,0.7)' : 'rgba(255,107,53,0.5)'
                             ),
                             borderColor: 'transparent',
@@ -948,38 +949,38 @@
                                 title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
                                 label: ctx => {
                                     const v = ctx.parsed.y;
-                                    const zone = v >= 2 ? ' (BTC Oversold)' : v <= -2 ? ' (BTC Overbought)' : '';
+                                    const zone = v >= 2 ? ' (BTC 고평가)' : v <= -2 ? ' (BTC 저평가)' : '';
                                     return ` ${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)}σ${zone}`;
                                 }
                             }
                         },
                         annotation: {
                             annotations: {
-                                oversoldZone: {
-                                    type: 'box', yMin: 2, yMax: 7,
-                                    backgroundColor: 'rgba(0,212,170,0.05)',
-                                    borderColor: 'rgba(0,212,170,0.15)', borderWidth: 1, borderDash: [3, 3],
-                                    label: {
-                                        display: true, content: 'BTC Oversold (Gold/BTC ↑)',
-                                        position: { x: 'start', y: 'center' },
-                                        color: 'rgba(0,212,170,0.45)',
-                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
-                                    }
-                                },
                                 overboughtZone: {
-                                    type: 'box', yMin: -5.5, yMax: -2,
+                                    type: 'box', yMin: 2, yMax: 7,
                                     backgroundColor: 'rgba(255,71,87,0.05)',
                                     borderColor: 'rgba(255,71,87,0.15)', borderWidth: 1, borderDash: [3, 3],
                                     label: {
-                                        display: true, content: 'BTC Overbought (Gold/BTC ↓)',
+                                        display: true, content: 'BTC 고평가 (금 대비)',
                                         position: { x: 'start', y: 'center' },
                                         color: 'rgba(255,71,87,0.45)',
                                         font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
                                     }
                                 },
+                                oversoldZone: {
+                                    type: 'box', yMin: -5.5, yMax: -2,
+                                    backgroundColor: 'rgba(0,212,170,0.05)',
+                                    borderColor: 'rgba(0,212,170,0.15)', borderWidth: 1, borderDash: [3, 3],
+                                    label: {
+                                        display: true, content: 'BTC 저평가 (금 대비)',
+                                        position: { x: 'start', y: 'center' },
+                                        color: 'rgba(0,212,170,0.45)',
+                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
+                                    }
+                                },
                                 zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [4, 4] },
-                                plus2: { type: 'line', yMin: 2, yMax: 2, borderColor: 'rgba(0,212,170,0.2)', borderWidth: 1, borderDash: [2, 4] },
-                                minus2: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(255,71,87,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                plus2: { type: 'line', yMin: 2, yMax: 2, borderColor: 'rgba(255,71,87,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                minus2: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(0,212,170,0.2)', borderWidth: 1, borderDash: [2, 4] },
                                 ...cycleAnnotations
                             }
                         },
@@ -999,7 +1000,7 @@
                                 callback: v => Number.isInteger(v) ? (v >= 0 ? '+' : '') + v + 'σ' : '',
                                 stepSize: 1
                             },
-                            title: { display: true, text: '52w Z-Score', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
+                            title: { display: true, text: '52주 Z-Score (금 대비)', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         }
                     }
@@ -1081,7 +1082,7 @@
         }
 
         function doShare(platform) {
-            const t = '비트코인 Power Law 멱법칙 분석 — HerdVibe';
+            const t = '비트코인 Power Law · 금 기반 밸류에이션 — HerdVibe';
             switch(platform) {
                 case 'twitter':
                     openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(SHARE_URL)}`);
@@ -1116,8 +1117,8 @@
                 Kakao.Share.sendDefault({
                     objectType: 'feed',
                     content: {
-                        title: '비트코인 Power Law 멱법칙 분석',
-                        description: 'BTC 가격 멱법칙 추세선·지지선 + Gold/BTC Z-Score',
+                        title: '비트코인 Power Law · 금 기반 밸류에이션',
+                        description: 'BTC 가격 멱법칙 추세선·지지선 + 금 대비 BTC Z-Score',
                         imageUrl: '',
                         link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
                     },
