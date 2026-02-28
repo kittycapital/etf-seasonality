@@ -487,14 +487,14 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>시차 적용 오버레이</h2>
-                    <div class="subtitle" id="overlaySubtitle">52주 롤링 수익률 비교 · 금을 N주 앞당김</div>
+                    <div class="subtitle" id="overlaySubtitle">52주 롤링 수익률 Z-Score · 금을 N주 앞당김</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 52주 수익률
+                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC Z-Score
                     </div>
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold 52주 수익률 (시차 적용)
+                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold Z-Score (시차 적용)
                     </div>
                 </div>
             </div>
@@ -943,30 +943,45 @@
             buildCorrChart(cc, best.lag);
         }
 
-        // ─── CHART 2: Overlay (Rolling 52w Return) ───
+        // ─── CHART 2: Overlay (Z-Score Normalized) ───
         function buildOverlayChart(lag) {
             const ctx = document.getElementById('overlayChart').getContext('2d');
             if (overlayChart) overlayChart.destroy();
 
-            // Compute rolling 52-week returns from aligned weekly data
             const rollWindow = 52;
 
-            // BTC rolling 52w return
-            const btcRoll = [];
+            // Compute rolling 52w returns
+            const btcRollRaw = [], goldRollRaw = [], rollDates = [];
             for (let i = rollWindow; i < alignedBtc.length; i++) {
-                let cumRet = 1;
-                for (let j = i - rollWindow; j < i; j++) cumRet *= (1 + alignedBtc[j]);
-                btcRoll.push({ x: alignedDates[i].getTime(), y: (cumRet - 1) * 100 });
+                let bCum = 1, gCum = 1;
+                for (let j = i - rollWindow; j < i; j++) {
+                    bCum *= (1 + alignedBtc[j]);
+                    gCum *= (1 + alignedGold[j]);
+                }
+                btcRollRaw.push((bCum - 1) * 100);
+                goldRollRaw.push((gCum - 1) * 100);
+                rollDates.push(alignedDates[i]);
             }
 
-            // Gold rolling 52w return — shifted by lag weeks
-            const goldRoll = [];
-            for (let i = rollWindow; i < alignedGold.length; i++) {
-                let cumRet = 1;
-                for (let j = i - rollWindow; j < i; j++) cumRet *= (1 + alignedGold[j]);
+            // Z-Score normalize each series
+            function zScore(arr) {
+                const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+                const std = Math.sqrt(arr.reduce((a, b) => a + (b - mean) ** 2, 0) / arr.length);
+                return arr.map(v => std > 0 ? (v - mean) / std : 0);
+            }
+
+            const btcZ = zScore(btcRollRaw);
+            const goldZ = zScore(goldRollRaw);
+
+            // BTC Z-Score data points
+            const btcData = btcZ.map((z, i) => ({ x: rollDates[i].getTime(), y: z }));
+
+            // Gold Z-Score data points — shifted by lag weeks
+            const goldData = [];
+            for (let i = 0; i < goldZ.length; i++) {
                 const shiftedIdx = i + lag;
-                if (shiftedIdx < alignedDates.length) {
-                    goldRoll.push({ x: alignedDates[shiftedIdx].getTime(), y: (cumRet - 1) * 100 });
+                if (shiftedIdx < rollDates.length) {
+                    goldData.push({ x: rollDates[shiftedIdx].getTime(), y: goldZ[i] });
                 }
             }
 
@@ -977,7 +992,7 @@
             if (found) corrAtLag = found.corr;
 
             document.getElementById('overlaySubtitle').textContent =
-                `52주 롤링 수익률 비교 · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
+                `52주 롤링 수익률 Z-Score · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
 
             overlayChart = new Chart(ctx, {
                 type: 'line',
@@ -985,25 +1000,23 @@
                 data: {
                     datasets: [
                         {
-                            label: 'BTC 52주 수익률',
-                            data: btcRoll,
+                            label: 'BTC Z-Score',
+                            data: btcData,
                             borderColor: '#f7931a',
                             borderWidth: 1.5,
                             pointRadius: 0,
                             tension: 0.2,
-                            fill: false,
-                            yAxisID: 'yBtc'
+                            fill: false
                         },
                         {
-                            label: `Gold 52주 수익률 (${lag}주 시프트)`,
-                            data: goldRoll,
+                            label: `Gold Z-Score (${lag}주 시프트)`,
+                            data: goldData,
                             borderColor: '#d4a843',
                             borderWidth: 1.5,
                             pointRadius: 0,
                             tension: 0.2,
                             fill: false,
-                            borderDash: [4, 2],
-                            yAxisID: 'yGold'
+                            borderDash: [4, 2]
                         }
                     ]
                 },
@@ -1019,7 +1032,18 @@
                             borderColor: '#333', borderWidth: 1, padding: 12,
                             callbacks: {
                                 title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
-                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(1)}%`
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}σ`
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                zeroLine: {
+                                    type: 'line',
+                                    yMin: 0, yMax: 0,
+                                    borderColor: 'rgba(255,255,255,0.15)',
+                                    borderWidth: 1,
+                                    borderDash: [4, 4]
+                                }
                             }
                         }
                     },
@@ -1031,33 +1055,16 @@
                             ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 12 },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         },
-                        yBtc: {
-                            type: 'linear',
-                            position: 'left',
+                        y: {
                             grid: { color: 'rgba(255,255,255,0.04)' },
                             ticks: {
-                                color: '#f7931a',
+                                color: '#888',
                                 font: { family: 'JetBrains Mono', size: 10 },
-                                callback: v => v.toFixed(0) + '%'
+                                callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'σ'
                             },
                             title: {
-                                display: true, text: 'BTC 52주 수익률',
-                                color: '#f7931a', font: { family: 'JetBrains Mono', size: 10 }
-                            },
-                            border: { color: 'rgba(255,255,255,0.1)' }
-                        },
-                        yGold: {
-                            type: 'linear',
-                            position: 'right',
-                            grid: { display: false },
-                            ticks: {
-                                color: '#d4a843',
-                                font: { family: 'JetBrains Mono', size: 10 },
-                                callback: v => v.toFixed(0) + '%'
-                            },
-                            title: {
-                                display: true, text: 'Gold 52주 수익률',
-                                color: '#d4a843', font: { family: 'JetBrains Mono', size: 10 }
+                                display: true, text: 'Z-Score (52주 롤링 수익률)',
+                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         }
