@@ -7,7 +7,7 @@
 
     <!-- Open Graph -->
     <meta property="og:title" content="비트코인 Power Law - 멱법칙 분석">
-    <meta property="og:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC·Gold/Silver 52주 Z-Score 분석">
+    <meta property="og:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC 52주 Z-Score 분석">
     <meta property="og:url" content="https://herdvibe.com/112">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="HerdVibe">
@@ -15,7 +15,7 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="비트코인 Power Law - 멱법칙 분석">
-    <meta name="twitter:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC·Gold/Silver 52주 Z-Score 분석">
+    <meta name="twitter:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC 52주 Z-Score 분석">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -208,76 +208,6 @@
         .stat-value.negative { color: var(--accent-red); }
         .stat-value.btc { color: var(--btc-line); }
 
-        /* Accordion */
-        .accordion {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .accordion-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 20px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-            user-select: none;
-        }
-
-        .accordion-header:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .accordion-header h3 {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .accordion-arrow {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            transition: transform 0.3s ease;
-        }
-
-        .accordion.open .accordion-arrow {
-            transform: rotate(180deg);
-        }
-
-        .accordion-body {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .accordion.open .accordion-body {
-            max-height: 500px;
-        }
-
-        .accordion-content {
-            padding: 0 20px 18px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .accordion-content p {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            margin-top: 14px;
-        }
-
-        .accordion-content code {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: var(--accent-cyan);
-            background: rgba(0,212,170,0.1);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-
         /* Share */
         .share-section {
             display: flex;
@@ -400,10 +330,6 @@
             .stat-card { padding: 12px 8px; }
             .stat-value { font-size: 1.1rem; }
             .stat-label { font-size: 0.65rem; }
-            .accordion-header { padding: 12px 15px; }
-            .accordion-header h3 { font-size: 0.82rem; }
-            .accordion-content { padding: 0 15px 14px; }
-            .accordion-content p { font-size: 0.73rem; }
             .share-section { gap: 6px; }
             .share-btn { padding: 8px 12px; font-size: 0.75rem; }
             .footer { padding: 15px; font-size: 0.65rem; }
@@ -426,7 +352,7 @@
     <div class="container">
         <header class="header">
             <h1>비트코인 Power Law</h1>
-            <p>BTC 가격 멱법칙 추세선·지지선 + Gold/BTC · Gold/Silver 52주 Z-Score</p>
+            <p>BTC 가격 멱법칙 추세선·지지선 + Gold/BTC 52주 Z-Score</p>
         </header>
 
         <!-- Stats -->
@@ -450,11 +376,6 @@
                 <div class="stat-label">Gold/BTC Z-Score</div>
                 <div class="stat-value" id="statGoldBtc">--</div>
                 <div class="stat-sub" id="statGoldBtcLabel">52주 기준</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Gold/Silver Z-Score</div>
-                <div class="stat-value" id="statGoldSilver">--</div>
-                <div class="stat-sub" id="statGoldSilverLabel">52주 기준</div>
             </div>
         </div>
 
@@ -490,14 +411,11 @@
         <div class="chart-card" style="padding-top:0; border-top-left-radius:0; border-top-right-radius:0; border-top:none;">
             <div class="chart-header" style="margin-bottom:8px;">
                 <div class="chart-title-group">
-                    <div class="subtitle">52주 Z-Score · Gold/BTC & Gold/Silver 비율</div>
+                    <div class="subtitle">52주 Z-Score · Gold/BTC 비율 기반 Oversold / Overbought</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
                         <span class="legend-bar" style="background:var(--accent-orange)"></span>Gold/BTC Z
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-bar" style="background:var(--accent-blue)"></span>Gold/Silver Z
                     </div>
                     <div class="legend-item">
                         <span class="legend-bar" style="background:rgba(0,212,170,0.25); border:1px solid rgba(0,212,170,0.4)"></span>BTC Oversold
@@ -509,21 +427,6 @@
             </div>
             <div class="chart-container-zscore">
                 <canvas id="zScoreChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Accordion -->
-        <div class="accordion" id="infoAccordion">
-            <div class="accordion-header" onclick="toggleAccordion('infoAccordion')">
-                <h3>📐 Power Law 모델이란?</h3>
-                <span class="accordion-arrow">▼</span>
-            </div>
-            <div class="accordion-body">
-                <div class="accordion-content">
-                    <p>비트코인 가격은 <code>Price = a × Days^b</code> 형태의 멱법칙(Power Law)을 따르는 경향이 있습니다. 제네시스 블록(2009.01.03) 이후 경과 일수에 대해 로그-로그 회귀를 적용하여 추세선과 지지선을 산출합니다.</p>
-                    <p><strong style="color:var(--trendline)">추세선</strong>은 장기 평균 궤적, <strong style="color:var(--support-line)">지지선</strong>은 역사적 바닥 근처의 하한 경계입니다. 가격이 지지선 아래로 내려간 적은 거의 없습니다.</p>
-                    <p><strong style="color:var(--accent-orange)">Gold/BTC Z-Score</strong>가 <strong style="color:var(--accent-cyan)">+2σ 이상</strong>이면 금 대비 BTC가 저평가(Oversold) 구간, <strong style="color:var(--accent-red)">-2σ 이하</strong>이면 BTC 고평가(Overbought) 구간입니다. <strong style="color:var(--accent-blue)">Gold/Silver Z-Score</strong>는 금·은 비율의 극단치를 보여줍니다.</p>
-                </div>
             </div>
         </div>
 
@@ -788,13 +691,17 @@
                 const el = document.getElementById('statGoldBtc');
                 el.textContent = (lastGBZ.zScore >= 0 ? '+' : '') + lastGBZ.zScore.toFixed(2);
                 el.className = 'stat-value ' + (lastGBZ.zScore >= 0 ? 'positive' : 'negative');
-            }
-
-            if (goldSlvZWeekly.length > 0) {
-                const lastGSZ = goldSlvZWeekly[goldSlvZWeekly.length - 1];
-                const el = document.getElementById('statGoldSilver');
-                el.textContent = (lastGSZ.zScore >= 0 ? '+' : '') + lastGSZ.zScore.toFixed(2);
-                el.className = 'stat-value ' + (lastGSZ.zScore >= 0 ? 'positive' : 'negative');
+                const labelEl = document.getElementById('statGoldBtcLabel');
+                if (lastGBZ.zScore >= 2) {
+                    labelEl.textContent = 'BTC Oversold';
+                    labelEl.style.color = 'var(--accent-cyan)';
+                } else if (lastGBZ.zScore <= -2) {
+                    labelEl.textContent = 'BTC Overbought';
+                    labelEl.style.color = 'var(--accent-red)';
+                } else {
+                    labelEl.textContent = '중립 · 52주 기준';
+                    labelEl.style.color = 'var(--text-secondary)';
+                }
             }
 
             // ─── WATERMARK PLUGIN ───
@@ -803,8 +710,8 @@
                 afterDraw(chart) {
                     const ctx = chart.ctx;
                     ctx.save();
-                    ctx.globalAlpha = 0.06;
-                    ctx.font = '600 28px JetBrains Mono';
+                    ctx.globalAlpha = 0.07;
+                    ctx.font = '700 42px JetBrains Mono';
                     ctx.fillStyle = '#ffffff';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -837,7 +744,6 @@
             }
 
             const goldBtcBarData = goldBtcZWeekly.map(d => ({ x: d.date.getTime(), y: d.zScore }));
-            const goldSlvBarData = goldSlvZWeekly.map(d => ({ x: d.date.getTime(), y: d.zScore }));
 
             // ─── PEAK/TROUGH DETECTION ───
             function detectCycleLabels(zData, minDist, thresh) {
@@ -1008,17 +914,7 @@
                             ),
                             borderColor: 'transparent',
                             barPercentage: 1.0, categoryPercentage: 1.0,
-                            barThickness: 'flex', maxBarThickness: 4, order: 2
-                        },
-                        {
-                            label: 'Gold/Silver Z-Score',
-                            data: goldSlvBarData,
-                            backgroundColor: goldSlvBarData.map(d =>
-                                d.y >= 0 ? 'rgba(77,171,247,0.6)' : 'rgba(77,171,247,0.4)'
-                            ),
-                            borderColor: 'transparent',
-                            barPercentage: 1.0, categoryPercentage: 1.0,
-                            barThickness: 'flex', maxBarThickness: 3, order: 3
+                            barThickness: 'flex', maxBarThickness: 5, order: 2
                         }
                     ]
                 },
@@ -1089,12 +985,6 @@
                 }
             });
 
-        }
-
-        // ─── ACCORDION ───
-        function toggleAccordion(id) {
-            const el = document.getElementById(id);
-            el.classList.toggle('open');
         }
 
         // ─── SHARE (3-fallback for iframe) ───
@@ -1174,7 +1064,7 @@
                     objectType: 'feed',
                     content: {
                         title: '비트코인 Power Law 멱법칙 분석',
-                        description: 'BTC 가격 멱법칙 추세선·지지선 + Gold/BTC·Gold/Silver Z-Score',
+                        description: 'BTC 가격 멱법칙 추세선·지지선 + Gold/BTC Z-Score',
                         imageUrl: '',
                         link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
                     },
