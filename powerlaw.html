@@ -166,7 +166,7 @@
         .chart-container-zscore {
             position: relative;
             width: 100%;
-            height: 200px;
+            height: 220px;
         }
 
         /* Stats Row */
@@ -940,7 +940,7 @@
                         annotation: {
                             annotations: {
                                 oversoldZone: {
-                                    type: 'box', yMin: 2, yMax: 5.5,
+                                    type: 'box', yMin: 2, yMax: 7,
                                     backgroundColor: 'rgba(0,212,170,0.05)',
                                     borderColor: 'rgba(0,212,170,0.15)', borderWidth: 1, borderDash: [3, 3],
                                     label: {
@@ -971,7 +971,7 @@
                     scales: {
                         x: xBase,
                         y: {
-                            type: 'linear', position: 'left', min: -5, max: 5,
+                            type: 'linear', position: 'left', min: -5.5, max: 7,
                             grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
                             ticks: {
                                 color: '#888', font: { family: 'JetBrains Mono', size: 10 },
