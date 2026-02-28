@@ -487,14 +487,14 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>시차 적용 오버레이</h2>
-                    <div class="subtitle" id="overlaySubtitle">금 가격을 N주 앞당겨 BTC와 비교</div>
+                    <div class="subtitle" id="overlaySubtitle">52주 롤링 수익률 비교 · 금을 N주 앞당김</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 수익률
+                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 52주 수익률
                     </div>
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold 수익률 (시차 적용)
+                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold 52주 수익률 (시차 적용)
                     </div>
                 </div>
             </div>
@@ -943,28 +943,30 @@
             buildCorrChart(cc, best.lag);
         }
 
-        // ─── CHART 2: Overlay ───
+        // ─── CHART 2: Overlay (Rolling 52w Return) ───
         function buildOverlayChart(lag) {
             const ctx = document.getElementById('overlayChart').getContext('2d');
             if (overlayChart) overlayChart.destroy();
 
-            // Build cumulative return series
-            // BTC: as-is
-            const btcCum = [{ x: alignedDates[0].getTime(), y: 0 }];
-            let btcSum = 0;
-            for (let i = 0; i < alignedBtc.length; i++) {
-                btcSum += alignedBtc[i];
-                btcCum.push({ x: alignedDates[i].getTime(), y: btcSum * 100 });
+            // Compute rolling 52-week returns from aligned weekly data
+            const rollWindow = 52;
+
+            // BTC rolling 52w return
+            const btcRoll = [];
+            for (let i = rollWindow; i < alignedBtc.length; i++) {
+                let cumRet = 1;
+                for (let j = i - rollWindow; j < i; j++) cumRet *= (1 + alignedBtc[j]);
+                btcRoll.push({ x: alignedDates[i].getTime(), y: (cumRet - 1) * 100 });
             }
 
-            // Gold: shifted by lag weeks (earlier)
-            const goldCum = [];
-            let goldSum = 0;
-            for (let i = 0; i < alignedGold.length; i++) {
-                goldSum += alignedGold[i];
+            // Gold rolling 52w return — shifted by lag weeks
+            const goldRoll = [];
+            for (let i = rollWindow; i < alignedGold.length; i++) {
+                let cumRet = 1;
+                for (let j = i - rollWindow; j < i; j++) cumRet *= (1 + alignedGold[j]);
                 const shiftedIdx = i + lag;
                 if (shiftedIdx < alignedDates.length) {
-                    goldCum.push({ x: alignedDates[shiftedIdx].getTime(), y: goldSum * 100 });
+                    goldRoll.push({ x: alignedDates[shiftedIdx].getTime(), y: (cumRet - 1) * 100 });
                 }
             }
 
@@ -975,7 +977,7 @@
             if (found) corrAtLag = found.corr;
 
             document.getElementById('overlaySubtitle').textContent =
-                `금 가격을 ${lag}주 앞당겨 BTC와 비교 · 상관계수: ${corrAtLag.toFixed(3)}`;
+                `52주 롤링 수익률 비교 · 금을 ${lag}주 앞당김 · 상관계수: ${corrAtLag.toFixed(3)}`;
 
             overlayChart = new Chart(ctx, {
                 type: 'line',
@@ -983,23 +985,25 @@
                 data: {
                     datasets: [
                         {
-                            label: 'BTC 누적수익률',
-                            data: btcCum,
+                            label: 'BTC 52주 수익률',
+                            data: btcRoll,
                             borderColor: '#f7931a',
                             borderWidth: 1.5,
                             pointRadius: 0,
                             tension: 0.2,
-                            fill: false
+                            fill: false,
+                            yAxisID: 'yBtc'
                         },
                         {
-                            label: `Gold 누적수익률 (${lag}주 시프트)`,
-                            data: goldCum,
+                            label: `Gold 52주 수익률 (${lag}주 시프트)`,
+                            data: goldRoll,
                             borderColor: '#d4a843',
                             borderWidth: 1.5,
                             pointRadius: 0,
                             tension: 0.2,
                             fill: false,
-                            borderDash: [4, 2]
+                            borderDash: [4, 2],
+                            yAxisID: 'yGold'
                         }
                     ]
                 },
@@ -1027,16 +1031,33 @@
                             ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 12 },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         },
-                        y: {
+                        yBtc: {
+                            type: 'linear',
+                            position: 'left',
                             grid: { color: 'rgba(255,255,255,0.04)' },
                             ticks: {
-                                color: '#888',
+                                color: '#f7931a',
                                 font: { family: 'JetBrains Mono', size: 10 },
                                 callback: v => v.toFixed(0) + '%'
                             },
                             title: {
-                                display: true, text: '누적 수익률 (%)',
-                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
+                                display: true, text: 'BTC 52주 수익률',
+                                color: '#f7931a', font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yGold: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: {
+                                color: '#d4a843',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v.toFixed(0) + '%'
+                            },
+                            title: {
+                                display: true, text: 'Gold 52주 수익률',
+                                color: '#d4a843', font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         }
