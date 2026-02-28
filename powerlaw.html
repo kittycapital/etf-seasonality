@@ -20,6 +20,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -48,6 +50,10 @@
         }
 
         html, body { overflow-x: hidden; }
+
+        .zoom-reset-btn{position:absolute;top:12px;right:12px;z-index:10;padding:5px 12px;background:rgba(255,255,255,0.08);border:1px solid var(--border-color);border-radius:6px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;display:none}
+        .zoom-reset-btn:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:var(--accent-cyan)}
+        .zoom-hint{text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;font-family:'JetBrains Mono',monospace}
 
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -382,7 +388,8 @@
         </div>
 
         <!-- Main Price Chart -->
-        <div class="chart-card" style="padding-bottom:8px; margin-bottom:0; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none;">
+        <div class="chart-card" style="padding-bottom:8px; margin-bottom:0; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none; position:relative;">
+            <button class="zoom-reset-btn" id="zoomResetBtn" onclick="resetZoom()">↺ Reset Zoom</button>
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>Bitcoin Price + Power Law Model</h2>
@@ -430,6 +437,7 @@
             <div class="chart-container-zscore">
                 <canvas id="zScoreChart"></canvas>
             </div>
+            <div class="zoom-hint">마우스 휠로 줌 · 드래그로 이동 · 모바일: 핀치 줌</div>
         </div>
 
         <!-- Share -->
@@ -816,7 +824,7 @@
             // ═══════════════════════════
             // CHART 1: BTC Price + Power Law
             // ═══════════════════════════
-            const priceChart = new Chart(priceCanvas.getContext('2d'), {
+            window._priceChart = new Chart(priceCanvas.getContext('2d'), {
                 type: 'line',
                 plugins: [watermarkPlugin],
                 data: {
@@ -881,6 +889,11 @@
                                     }
                                 }
                             }
+                        },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x', onPanComplete: function(ctx) { syncCharts(ctx.chart, 'price'); } },
+                            zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: function(ctx) { syncCharts(ctx.chart, 'price'); } },
+                            limits: { x: { min: new Date('2009-01-01').getTime(), max: new Date('2029-12-31').getTime() } }
                         }
                     },
                     scales: {
@@ -902,7 +915,7 @@
             // ═══════════════════════════
             // CHART 2: Z-Score Panel
             // ═══════════════════════════
-            const zScoreChart = new Chart(document.getElementById('zScoreChart').getContext('2d'), {
+            window._zScoreChart = new Chart(document.getElementById('zScoreChart').getContext('2d'), {
                 type: 'bar',
                 plugins: [watermarkPlugin],
                 data: {
@@ -969,6 +982,11 @@
                                 minus2: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(255,71,87,0.2)', borderWidth: 1, borderDash: [2, 4] },
                                 ...cycleAnnotations
                             }
+                        },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x', onPanComplete: function(ctx) { syncCharts(ctx.chart, 'zscore'); } },
+                            zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: function(ctx) { syncCharts(ctx.chart, 'zscore'); } },
+                            limits: { x: { min: new Date('2009-01-01').getTime(), max: new Date('2029-12-31').getTime() } }
                         }
                     },
                     scales: {
@@ -988,6 +1006,38 @@
                 }
             });
 
+        }
+
+        // ─── ZOOM SYNC ───
+        var _syncing = false;
+        function syncCharts(sourceChart, sourceId) {
+            if (_syncing) return;
+            _syncing = true;
+            var xMin = sourceChart.scales.x.min;
+            var xMax = sourceChart.scales.x.max;
+            var target = sourceId === 'price' ? window._zScoreChart : window._priceChart;
+            if (target) {
+                target.options.scales.x.min = xMin;
+                target.options.scales.x.max = xMax;
+                target.update('none');
+            }
+            // show reset button
+            var btn = document.getElementById('zoomResetBtn');
+            if (btn) btn.style.display = 'block';
+            _syncing = false;
+        }
+        function resetZoom() {
+            var origMin = new Date('2009-01-01').getTime();
+            var origMax = new Date('2029-12-31').getTime();
+            [window._priceChart, window._zScoreChart].forEach(function(c) {
+                if (c) {
+                    c.options.scales.x.min = origMin;
+                    c.options.scales.x.max = origMax;
+                    c.update('none');
+                }
+            });
+            var btn = document.getElementById('zoomResetBtn');
+            if (btn) btn.style.display = 'none';
         }
 
         // ─── SHARE (3-fallback for iframe) ───
