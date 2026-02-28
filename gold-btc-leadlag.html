@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>금-비트코인 선행성 분석 | HerdVibe</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
+    <meta property="og:description" content="금 가격이 비트코인을 얼마나 먼저 예고하는가? Cross-Correlation 및 시차 오버레이 분석">
+    <meta property="og:url" content="https://herdvibe.com/113">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="HerdVibe">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
+    <meta name="twitter:description" content="금 가격이 비트코인을 얼마나 먼저 예고하는가? Cross-Correlation 및 시차 오버레이 분석">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-orange: #ff6b35;
+            --accent-blue: #4dabf7;
+            --accent-cyan: #00d4aa;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffd43b;
+            --accent-gold: #d4a843;
+            --border-color: #2a2a2a;
+            --btc-line: #f7931a;
+        }
+
+        html, body { overflow-x: hidden; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-value.gold { color: var(--accent-gold); }
+        .stat-value.positive { color: var(--accent-cyan); }
+        .stat-value.negative { color: var(--accent-red); }
+        .stat-value.neutral { color: var(--accent-orange); }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Chart Card */
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chart-title-group h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .legend-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .legend-line {
+            width: 18px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-bar {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 380px;
+        }
+
+        .chart-container-sm {
+            position: relative;
+            width: 100%;
+            height: 300px;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            z-index: 10;
+        }
+
+        .spinner {
+            width: 24px; height: 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Slider */
+        .slider-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 12px 0 4px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .slider-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .slider-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-gold);
+            min-width: 70px;
+            text-align: center;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--border-color);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(212, 168, 67, 0.4);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-gold);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .optimal-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            padding: 5px 10px;
+            background: rgba(212, 168, 67, 0.12);
+            border: 1px solid rgba(212, 168, 67, 0.3);
+            color: var(--accent-gold);
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .optimal-btn:hover {
+            background: rgba(212, 168, 67, 0.2);
+            border-color: var(--accent-gold);
+        }
+
+        /* Tab buttons */
+        .tab-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .tab-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            padding: 6px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: rgba(212, 168, 67, 0.12);
+            border-color: rgba(212, 168, 67, 0.4);
+            color: var(--accent-gold);
+        }
+
+        .tab-btn:hover:not(.active) {
+            border-color: #3a3a3a;
+            color: var(--text-primary);
+        }
+
+        /* Share */
+        .share-section {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-family: 'Noto Sans KR', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .share-btn:hover { background: var(--bg-tertiary); border-color: #3a3a3a; color: var(--text-primary); }
+        .share-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .share-btn.twitter { color: var(--text-secondary); }
+        .share-btn.twitter:hover { color: #fff; border-color: #555; }
+        .share-btn.telegram { color: #29b6f6; border-color: rgba(41,182,246,0.2); }
+        .share-btn.telegram:hover { background: rgba(41,182,246,0.08); border-color: rgba(41,182,246,0.4); }
+        .share-btn.kakao { color: #fee500; border-color: rgba(254,229,0,0.2); }
+        .share-btn.kakao:hover { background: rgba(254,229,0,0.08); border-color: rgba(254,229,0,0.4); }
+        .share-btn.instagram { color: #e1306c; border-color: rgba(225,48,108,0.2); }
+        .share-btn.instagram:hover { background: rgba(225,48,108,0.08); border-color: rgba(225,48,108,0.4); }
+        .share-btn.copy { color: var(--text-secondary); }
+        .share-btn.copy:hover { color: var(--accent-cyan); border-color: rgba(0,212,170,0.3); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.82rem;
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            transition: all 0.35s ease;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            .header { padding: 20px 0 15px; margin-bottom: 15px; }
+            .header h1 { font-size: 1.4rem; }
+            .header p { font-size: 0.75rem; }
+            .chart-card { padding: 15px 12px; border-radius: 10px; }
+            .chart-container { height: 320px; }
+            .chart-container-sm { height: 260px; }
+            .legend-row { gap: 10px; }
+            .legend-item { font-size: 0.62rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-value { font-size: 1.1rem; }
+            .stat-label { font-size: 0.65rem; }
+            .share-section { gap: 6px; }
+            .share-btn { padding: 8px 12px; font-size: 0.75rem; }
+            .slider-section { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+            .slider-label { font-size: 0.68rem; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .header h1 { font-size: 1.2rem; }
+            .chart-container { height: 280px; }
+            .chart-container-sm { height: 220px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .stat-value { font-size: 1rem; }
+            .legend-item { font-size: 0.58rem; gap: 4px; }
+            .share-section { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+            .share-btn { padding: 8px 4px; font-size: 0.65rem; justify-content: center; }
+            .share-btn svg { width: 12px; height: 12px; }
+            .tab-btn { padding: 5px 10px; font-size: 0.65rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>금-비트코인 선행성 분석</h1>
+            <p>Gold-BTC Lead-Lag · 금 가격이 비트코인을 얼마나 먼저 예고하는가?</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-label">최적 선행 기간</div>
+                <div class="stat-value gold" id="statLag">--</div>
+                <div class="stat-sub" id="statLagSub">금 → BTC</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">최적 Lag 상관계수</div>
+                <div class="stat-value" id="statCorr">--</div>
+                <div class="stat-sub" id="statCorrSub">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">금 최근 12주 변화</div>
+                <div class="stat-value" id="statGoldChg">--</div>
+                <div class="stat-sub">GLD ETF 기준</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">BTC 시그널</div>
+                <div class="stat-value" id="statSignal">--</div>
+                <div class="stat-sub" id="statSignalSub">--</div>
+            </div>
+        </div>
+
+        <!-- Chart 1: Cross-Correlation -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <h2>Cross-Correlation: 금 vs BTC</h2>
+                    <div class="subtitle">주간 수익률 기준 · Lag (+) = 금 선행, Lag (-) = BTC 선행</div>
+                </div>
+                <div class="tab-row" id="corrTabs">
+                    <button class="tab-btn active" data-period="all" onclick="switchCorrPeriod('all')">전체</button>
+                    <button class="tab-btn" data-period="5y" onclick="switchCorrPeriod('5y')">5Y</button>
+                    <button class="tab-btn" data-period="3y" onclick="switchCorrPeriod('3y')">3Y</button>
+                    <button class="tab-btn" data-period="1y" onclick="switchCorrPeriod('1y')">1Y</button>
+                </div>
+            </div>
+            <div class="chart-container" id="corrChartWrap">
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                    데이터 로딩 중...
+                </div>
+                <canvas id="corrChart" style="display:none"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 2: Overlay -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <h2>시차 적용 오버레이</h2>
+                    <div class="subtitle" id="overlaySubtitle">금 가격을 N주 앞당겨 BTC와 비교</div>
+                </div>
+                <div class="legend-row">
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 수익률
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold 수익률 (시차 적용)
+                    </div>
+                </div>
+            </div>
+            <div class="slider-section">
+                <span class="slider-label">시차 (Lag):</span>
+                <input type="range" id="lagSlider" min="0" max="52" value="12" oninput="updateOverlay(this.value)">
+                <span class="slider-value" id="lagDisplay">12주</span>
+                <button class="optimal-btn" id="optimalBtn" onclick="setOptimalLag()">최적값 적용</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="overlayChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 3: Rolling Lag -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <h2>롤링 최적 Lag 타임라인</h2>
+                    <div class="subtitle">52주 롤링 윈도우 기준 · 최적 선행 기간 변화 추적</div>
+                </div>
+            </div>
+            <div class="chart-container-sm">
+                <canvas id="rollingChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Share -->
+        <div class="share-section">
+            <button class="share-btn twitter" onclick="doShare('twitter')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                트위터
+            </button>
+            <button class="share-btn telegram" onclick="doShare('telegram')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                텔레그램
+            </button>
+            <button class="share-btn kakao" onclick="doShare('kakao')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.116 4.508 6.482-.144.525-.925 3.388-.958 3.603 0 0-.02.157.083.217.103.06.224.013.224.013.296-.041 3.434-2.263 3.973-2.652.703.098 1.428.15 2.17.15 5.523 0 10-3.463 10-7.813C22 6.463 17.523 3 12 3z"/></svg>
+                카카오톡
+            </button>
+            <button class="share-btn instagram" onclick="doShare('instagram')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                인스타그램
+            </button>
+            <button class="share-btn copy" onclick="doShare('copy')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                링크복사
+            </button>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+
+        <footer class="footer">
+            데이터 출처: Yahoo Finance (GLD, BTC-USD) | 매일 자동 업데이트
+        </footer>
+    </div>
+
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+    <script>
+        try { Kakao.init('a43ed7b39fac35458f4f9df925a279b5'); } catch(e) {}
+    </script>
+    <script>
+        // ─── CONSTANTS ───
+        const SHARE_URL = 'https://herdvibe.com/113';
+        const MAX_LAG = 52; // weeks
+
+        // ─── DATA LOADING ───
+        async function loadCSV(filename) {
+            try {
+                const resp = await fetch(`data/${filename}`);
+                const text = await resp.text();
+                const lines = text.trim().replace(/\r/g, '').split('\n');
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    const dateStr = parts[0];
+                    const close = parseFloat(parts[1]);
+                    if (!isNaN(close) && dateStr) {
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) data.push({ date, price: close });
+                    }
+                }
+                data.sort((a, b) => a.date - b.date);
+                return data;
+            } catch (e) {
+                console.error(`Failed to load ${filename}:`, e);
+                return [];
+            }
+        }
+
+        // ─── WEEKLY RESAMPLE ───
+        function toWeekly(data) {
+            if (data.length === 0) return [];
+            const weekly = [];
+            let weekStart = null, weekData = [];
+            data.forEach(d => {
+                const wk = new Date(d.date);
+                wk.setDate(wk.getDate() - wk.getDay());
+                const key = wk.toISOString().slice(0, 10);
+                if (weekStart !== key) {
+                    if (weekData.length > 0) weekly.push(weekData[weekData.length - 1]);
+                    weekStart = key;
+                    weekData = [d];
+                } else {
+                    weekData.push(d);
+                }
+            });
+            if (weekData.length > 0) weekly.push(weekData[weekData.length - 1]);
+            return weekly;
+        }
+
+        // ─── WEEKLY RETURNS ───
+        function weeklyReturns(weekly) {
+            const returns = [];
+            for (let i = 1; i < weekly.length; i++) {
+                returns.push({
+                    date: weekly[i].date,
+                    ret: (weekly[i].price - weekly[i - 1].price) / weekly[i - 1].price
+                });
+            }
+            return returns;
+        }
+
+        // ─── ALIGN BY DATE ───
+        function alignReturns(r1, r2) {
+            const map2 = {};
+            r2.forEach(d => { map2[d.date.toISOString().slice(0, 10)] = d.ret; });
+            const aligned1 = [], aligned2 = [], dates = [];
+            r1.forEach(d => {
+                const key = d.date.toISOString().slice(0, 10);
+                if (map2[key] !== undefined) {
+                    aligned1.push(d.ret);
+                    aligned2.push(map2[key]);
+                    dates.push(d.date);
+                }
+            });
+            return { r1: aligned1, r2: aligned2, dates };
+        }
+
+        // ─── CROSS-CORRELATION ───
+        function crossCorrelation(gold, btc, maxLag) {
+            const n = gold.length;
+            const results = [];
+
+            // Mean
+            const meanG = gold.reduce((a, b) => a + b, 0) / n;
+            const meanB = btc.reduce((a, b) => a + b, 0) / n;
+
+            // Std
+            const stdG = Math.sqrt(gold.reduce((a, b) => a + (b - meanG) ** 2, 0) / n);
+            const stdB = Math.sqrt(btc.reduce((a, b) => a + (b - meanB) ** 2, 0) / n);
+
+            for (let lag = -maxLag; lag <= maxLag; lag++) {
+                let sum = 0, count = 0;
+                for (let i = 0; i < n; i++) {
+                    const j = i + lag;
+                    if (j >= 0 && j < n) {
+                        sum += (gold[i] - meanG) * (btc[j] - meanB);
+                        count++;
+                    }
+                }
+                const corr = count > 10 ? sum / (count * stdG * stdB) : 0;
+                results.push({ lag, corr });
+            }
+            return results;
+        }
+
+        // ─── ROLLING OPTIMAL LAG ───
+        function rollingOptimalLag(gold, btc, dates, windowSize, maxLag) {
+            const results = [];
+            for (let i = windowSize; i < gold.length; i++) {
+                const gSlice = gold.slice(i - windowSize, i);
+                const bSlice = btc.slice(i - windowSize, i);
+                const cc = crossCorrelation(gSlice, bSlice, Math.min(maxLag, Math.floor(windowSize / 3)));
+
+                // Only positive lags (gold leads)
+                const posLags = cc.filter(c => c.lag >= 0);
+                let best = posLags[0];
+                posLags.forEach(c => { if (c.corr > best.corr) best = c; });
+
+                results.push({
+                    date: dates[i],
+                    optimalLag: best.lag,
+                    corr: best.corr
+                });
+            }
+            return results;
+        }
+
+        // ─── WATERMARK PLUGIN ───
+        const watermarkPlugin = {
+            id: 'watermark',
+            afterDraw(chart) {
+                const ctx = chart.ctx;
+                const area = chart.chartArea;
+                const w = area.right - area.left;
+                const fontSize = Math.max(16, Math.min(42, w * 0.07));
+                ctx.save();
+                ctx.globalAlpha = 0.07;
+                ctx.font = `700 ${fontSize}px JetBrains Mono`;
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Herdvibe.com', (area.left + area.right) / 2, (area.top + area.bottom) / 2);
+                ctx.restore();
+            }
+        };
+
+        // ─── GLOBAL STATE ───
+        let corrChart, overlayChart, rollingChart;
+        let goldReturns, btcReturns, alignedGold, alignedBtc, alignedDates;
+        let currentOptimalLag = 12;
+        let corrPeriodData = {};
+
+        // ─── MAIN ───
+        async function init() {
+            const [btcRaw, gldRaw] = await Promise.all([
+                loadCSV('BTC_USD.csv'),
+                loadCSV('GLD.csv')
+            ]);
+
+            if (btcRaw.length === 0 || gldRaw.length === 0) {
+                document.getElementById('loading').innerHTML = '⚠️ 데이터를 불러올 수 없습니다';
+                return;
+            }
+
+            // Weekly returns
+            const btcWeekly = toWeekly(btcRaw);
+            const gldWeekly = toWeekly(gldRaw);
+            const btcRet = weeklyReturns(btcWeekly);
+            const gldRet = weeklyReturns(gldWeekly);
+
+            // Align
+            const aligned = alignReturns(gldRet, btcRet);
+            alignedGold = aligned.r1;
+            alignedBtc = aligned.r2;
+            alignedDates = aligned.dates;
+
+            // Prepare period subsets
+            const now = alignedDates[alignedDates.length - 1];
+            const periods = { all: 0, '5y': 260, '3y': 156, '1y': 52 };
+            for (const [key, weeks] of Object.entries(periods)) {
+                const startIdx = weeks === 0 ? 0 : Math.max(0, alignedGold.length - weeks);
+                corrPeriodData[key] = {
+                    gold: alignedGold.slice(startIdx),
+                    btc: alignedBtc.slice(startIdx),
+                    dates: alignedDates.slice(startIdx)
+                };
+            }
+
+            // Full cross-correlation
+            const cc = crossCorrelation(alignedGold, alignedBtc, MAX_LAG);
+
+            // Find optimal positive lag
+            const posLags = cc.filter(c => c.lag >= 0);
+            let best = posLags[0];
+            posLags.forEach(c => { if (c.corr > best.corr) best = c; });
+            currentOptimalLag = best.lag;
+
+            // Update stats
+            document.getElementById('statLag').textContent = best.lag + '주';
+            document.getElementById('statLagSub').textContent = `금이 BTC보다 ${best.lag}주 선행`;
+
+            const corrEl = document.getElementById('statCorr');
+            corrEl.textContent = best.corr.toFixed(3);
+            corrEl.className = 'stat-value ' + (best.corr >= 0.3 ? 'positive' : best.corr >= 0.1 ? 'neutral' : 'negative');
+            document.getElementById('statCorrSub').textContent =
+                best.corr >= 0.5 ? '강한 상관' : best.corr >= 0.3 ? '유의미한 상관' : best.corr >= 0.1 ? '약한 상관' : '무상관';
+
+            // Gold recent 12w change
+            const gldRecent = gldWeekly.slice(-13);
+            if (gldRecent.length >= 2) {
+                const gldChg = (gldRecent[gldRecent.length - 1].price - gldRecent[0].price) / gldRecent[0].price * 100;
+                const gldEl = document.getElementById('statGoldChg');
+                gldEl.textContent = (gldChg >= 0 ? '+' : '') + gldChg.toFixed(1) + '%';
+                gldEl.className = 'stat-value ' + (gldChg >= 0 ? 'positive' : 'negative');
+            }
+
+            // BTC signal based on gold lead
+            const signalEl = document.getElementById('statSignal');
+            const signalSubEl = document.getElementById('statSignalSub');
+            if (gldRecent.length >= 2) {
+                const gldChg = (gldRecent[gldRecent.length - 1].price - gldRecent[0].price) / gldRecent[0].price * 100;
+                if (gldChg > 5 && best.corr >= 0.2) {
+                    signalEl.textContent = '상승 예상';
+                    signalEl.className = 'stat-value positive';
+                    signalSubEl.textContent = `금 ${best.lag}주 전 상승 반영`;
+                } else if (gldChg < -5 && best.corr >= 0.2) {
+                    signalEl.textContent = '하락 주의';
+                    signalEl.className = 'stat-value negative';
+                    signalSubEl.textContent = `금 ${best.lag}주 전 하락 반영`;
+                } else {
+                    signalEl.textContent = '중립';
+                    signalEl.className = 'stat-value neutral';
+                    signalSubEl.textContent = '뚜렷한 방향성 없음';
+                }
+            }
+
+            // ─── BUILD CHARTS ───
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('corrChart').style.display = 'block';
+
+            buildCorrChart(cc, best.lag);
+            buildOverlayChart(currentOptimalLag);
+            buildRollingChart();
+
+            // Set slider
+            document.getElementById('lagSlider').value = currentOptimalLag;
+            document.getElementById('lagDisplay').textContent = currentOptimalLag + '주';
+            document.getElementById('optimalBtn').textContent = `최적값 (${currentOptimalLag}주)`;
+        }
+
+        // ─── CHART 1: Cross-Correlation ───
+        function buildCorrChart(cc, optimalLag) {
+            const ctx = document.getElementById('corrChart').getContext('2d');
+            if (corrChart) corrChart.destroy();
+
+            const labels = cc.map(c => c.lag);
+            const values = cc.map(c => c.corr);
+            const colors = cc.map(c => {
+                if (c.lag === optimalLag) return 'rgba(212, 168, 67, 1)';
+                if (c.lag > 0) return c.corr > 0 ? 'rgba(0, 212, 170, 0.6)' : 'rgba(255, 71, 87, 0.4)';
+                if (c.lag < 0) return c.corr > 0 ? 'rgba(77, 171, 247, 0.5)' : 'rgba(255, 71, 87, 0.3)';
+                return 'rgba(255, 255, 255, 0.3)';
+            });
+
+            corrChart = new Chart(ctx, {
+                type: 'bar',
+                plugins: [watermarkPlugin],
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderColor: 'transparent',
+                        barPercentage: 1.0,
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 12,
+                            callbacks: {
+                                title: items => {
+                                    const lag = items[0].label;
+                                    const dir = lag > 0 ? '금 선행' : lag < 0 ? 'BTC 선행' : '동시';
+                                    return `Lag: ${lag}주 (${dir})`;
+                                },
+                                label: ctx => `상관계수: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(4)}`
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                optLine: {
+                                    type: 'line',
+                                    xMin: optimalLag + MAX_LAG, xMax: optimalLag + MAX_LAG,
+                                    borderColor: 'rgba(212, 168, 67, 0.7)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 3],
+                                    label: {
+                                        display: true,
+                                        content: `최적: ${optimalLag}주`,
+                                        position: 'start',
+                                        backgroundColor: 'rgba(212, 168, 67, 0.15)',
+                                        color: 'rgba(212, 168, 67, 0.9)',
+                                        font: { family: 'JetBrains Mono', size: 10, weight: '600' },
+                                        padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                                        borderRadius: 4
+                                    }
+                                },
+                                zeroLag: {
+                                    type: 'line',
+                                    xMin: MAX_LAG, xMax: MAX_LAG,
+                                    borderColor: 'rgba(255,255,255,0.15)',
+                                    borderWidth: 1,
+                                    borderDash: [4, 4]
+                                },
+                                zeroCorr: {
+                                    type: 'line',
+                                    yMin: 0, yMax: 0,
+                                    borderColor: 'rgba(255,255,255,0.1)',
+                                    borderWidth: 1
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#666',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: function(val, idx) {
+                                    const lag = idx - MAX_LAG;
+                                    if (lag % 10 === 0) return lag + 'w';
+                                    return '';
+                                },
+                                maxRotation: 0
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#888',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v.toFixed(2)
+                            },
+                            title: {
+                                display: true, text: '상관계수',
+                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function switchCorrPeriod(period) {
+            document.querySelectorAll('#corrTabs .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`#corrTabs .tab-btn[data-period="${period}"]`).classList.add('active');
+
+            const d = corrPeriodData[period];
+            const cc = crossCorrelation(d.gold, d.btc, MAX_LAG);
+
+            const posLags = cc.filter(c => c.lag >= 0);
+            let best = posLags[0];
+            posLags.forEach(c => { if (c.corr > best.corr) best = c; });
+
+            buildCorrChart(cc, best.lag);
+        }
+
+        // ─── CHART 2: Overlay ───
+        function buildOverlayChart(lag) {
+            const ctx = document.getElementById('overlayChart').getContext('2d');
+            if (overlayChart) overlayChart.destroy();
+
+            // Build cumulative return series
+            // BTC: as-is
+            const btcCum = [{ x: alignedDates[0].getTime(), y: 0 }];
+            let btcSum = 0;
+            for (let i = 0; i < alignedBtc.length; i++) {
+                btcSum += alignedBtc[i];
+                btcCum.push({ x: alignedDates[i].getTime(), y: btcSum * 100 });
+            }
+
+            // Gold: shifted by lag weeks (earlier)
+            const goldCum = [];
+            let goldSum = 0;
+            for (let i = 0; i < alignedGold.length; i++) {
+                goldSum += alignedGold[i];
+                const shiftedIdx = i + lag;
+                if (shiftedIdx < alignedDates.length) {
+                    goldCum.push({ x: alignedDates[shiftedIdx].getTime(), y: goldSum * 100 });
+                }
+            }
+
+            // Compute correlation at this lag
+            let corrAtLag = 0;
+            const cc = crossCorrelation(alignedGold, alignedBtc, MAX_LAG);
+            const found = cc.find(c => c.lag === lag);
+            if (found) corrAtLag = found.corr;
+
+            document.getElementById('overlaySubtitle').textContent =
+                `금 가격을 ${lag}주 앞당겨 BTC와 비교 · 상관계수: ${corrAtLag.toFixed(3)}`;
+
+            overlayChart = new Chart(ctx, {
+                type: 'line',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: 'BTC 누적수익률',
+                            data: btcCum,
+                            borderColor: '#f7931a',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false
+                        },
+                        {
+                            label: `Gold 누적수익률 (${lag}주 시프트)`,
+                            data: goldCum,
+                            borderColor: '#d4a843',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false,
+                            borderDash: [4, 2]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 12,
+                            callbacks: {
+                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(1)}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 12 },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#888',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v.toFixed(0) + '%'
+                            },
+                            title: {
+                                display: true, text: '누적 수익률 (%)',
+                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateOverlay(val) {
+            const lag = parseInt(val);
+            document.getElementById('lagDisplay').textContent = lag + '주';
+            buildOverlayChart(lag);
+        }
+
+        function setOptimalLag() {
+            document.getElementById('lagSlider').value = currentOptimalLag;
+            document.getElementById('lagDisplay').textContent = currentOptimalLag + '주';
+            buildOverlayChart(currentOptimalLag);
+        }
+
+        // ─── CHART 3: Rolling ───
+        function buildRollingChart() {
+            const ctx = document.getElementById('rollingChart').getContext('2d');
+            const rolling = rollingOptimalLag(alignedGold, alignedBtc, alignedDates, 104, 26);
+
+            const lagData = rolling.map(d => ({ x: d.date.getTime(), y: d.optimalLag }));
+            const corrData = rolling.map(d => ({ x: d.date.getTime(), y: d.corr }));
+
+            rollingChart = new Chart(ctx, {
+                type: 'line',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: '최적 Lag (주)',
+                            data: lagData,
+                            borderColor: '#d4a843',
+                            backgroundColor: 'rgba(212, 168, 67, 0.08)',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            tension: 0.3,
+                            fill: true,
+                            yAxisID: 'yLag'
+                        },
+                        {
+                            label: '상관계수',
+                            data: corrData,
+                            borderColor: 'rgba(0, 212, 170, 0.6)',
+                            borderWidth: 1,
+                            pointRadius: 0,
+                            tension: 0.3,
+                            fill: false,
+                            borderDash: [4, 3],
+                            yAxisID: 'yCorr'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 12,
+                            callbacks: {
+                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
+                                label: ctx => {
+                                    if (ctx.datasetIndex === 0) return ` 최적 Lag: ${ctx.parsed.y}주`;
+                                    return ` 상관계수: ${ctx.parsed.y.toFixed(3)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 10 },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yLag: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0, max: 30,
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#d4a843',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v + 'w'
+                            },
+                            title: {
+                                display: true, text: '최적 Lag (주)',
+                                color: '#d4a843', font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yCorr: {
+                            type: 'linear',
+                            position: 'right',
+                            min: -0.2, max: 0.8,
+                            grid: { display: false },
+                            ticks: {
+                                color: 'rgba(0,212,170,0.6)',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v.toFixed(1)
+                            },
+                            title: {
+                                display: true, text: '상관계수',
+                                color: 'rgba(0,212,170,0.6)', font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ─── SHARE (3-fallback for iframe) ───
+        function openUrl(url) {
+            try {
+                const a = document.createElement('a');
+                a.href = url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch(e) {
+                window.open(url, '_blank');
+            }
+        }
+
+        function doCopy(text) {
+            try { window.parent.postMessage({ type: 'clipboard', text }, '*'); } catch(e) {}
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {}).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;opacity:0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch(e) {
+                window.prompt('아래 링크를 복사하세요:', text);
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function doShare(type) {
+            const title = '금-비트코인 선행성 분석 | HerdVibe';
+            const text = '금 가격이 비트코인을 얼마나 먼저 예고하는가?';
+            const url = SHARE_URL;
+
+            switch(type) {
+                case 'twitter':
+                    openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
+                    break;
+                case 'telegram':
+                    openUrl(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+                    break;
+                case 'kakao':
+                    try {
+                        if (window.Kakao && Kakao.isInitialized()) {
+                            Kakao.Share.sendDefault({
+                                objectType: 'feed',
+                                content: {
+                                    title: title,
+                                    description: text,
+                                    imageUrl: '',
+                                    link: { mobileWebUrl: url, webUrl: url }
+                                }
+                            });
+                        } else {
+                            openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`);
+                        }
+                    } catch(e) {
+                        openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`);
+                    }
+                    break;
+                case 'instagram':
+                    doCopy(url);
+                    showToast('링크가 복사되었습니다 — 인스타그램 스토리에 붙여넣기 하세요');
+                    break;
+                case 'copy':
+                    doCopy(url);
+                    showToast('링크가 복사되었습니다');
+                    break;
+            }
+        }
+
+        // ─── INIT ───
+        init();
+    </script>
+</body>
+</html>
