@@ -157,10 +157,16 @@
         }
 
         /* Chart Container */
-        .chart-container {
+        .chart-container-price {
             position: relative;
             width: 100%;
-            height: 500px;
+            height: 420px;
+        }
+
+        .chart-container-zscore {
+            position: relative;
+            width: 100%;
+            height: 200px;
         }
 
         /* Stats Row */
@@ -386,7 +392,8 @@
             .header h1 { font-size: 1.4rem; }
             .header p { font-size: 0.75rem; }
             .chart-card { padding: 15px 12px; border-radius: 10px; }
-            .chart-container { height: 380px; }
+            .chart-container-price { height: 350px; }
+            .chart-container-zscore { height: 180px; }
             .legend-row { gap: 10px; }
             .legend-item { font-size: 0.62rem; }
             .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -405,7 +412,8 @@
         @media (max-width: 480px) {
             .container { padding: 10px; }
             .header h1 { font-size: 1.2rem; }
-            .chart-container { height: 320px; }
+            .chart-container-price { height: 300px; }
+            .chart-container-zscore { height: 160px; }
             .stats-row { grid-template-columns: repeat(2, 1fr); }
             .stat-value { font-size: 1rem; }
             .legend-item { font-size: 0.58rem; gap: 4px; }
@@ -450,8 +458,8 @@
             </div>
         </div>
 
-        <!-- Main Chart -->
-        <div class="chart-card">
+        <!-- Main Price Chart -->
+        <div class="chart-card" style="padding-bottom:8px; margin-bottom:0; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none;">
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>Bitcoin Price + Power Law Model</h2>
@@ -467,20 +475,40 @@
                     <div class="legend-item">
                         <span class="legend-line" style="background:var(--support-line)"></span>지지선
                     </div>
+                </div>
+            </div>
+            <div class="chart-container-price" id="chartWrap">
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                    데이터 로딩 중...
+                </div>
+                <canvas id="priceChart" style="display:none"></canvas>
+            </div>
+        </div>
+
+        <!-- Z-Score Chart -->
+        <div class="chart-card" style="padding-top:0; border-top-left-radius:0; border-top-right-radius:0; border-top:none;">
+            <div class="chart-header" style="margin-bottom:8px;">
+                <div class="chart-title-group">
+                    <div class="subtitle">52주 Z-Score · Gold/BTC & Gold/Silver 비율</div>
+                </div>
+                <div class="legend-row">
                     <div class="legend-item">
                         <span class="legend-bar" style="background:var(--accent-orange)"></span>Gold/BTC Z
                     </div>
                     <div class="legend-item">
                         <span class="legend-bar" style="background:var(--accent-blue)"></span>Gold/Silver Z
                     </div>
+                    <div class="legend-item">
+                        <span class="legend-bar" style="background:rgba(0,212,170,0.25); border:1px solid rgba(0,212,170,0.4)"></span>BTC Oversold
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-bar" style="background:rgba(255,71,87,0.25); border:1px solid rgba(255,71,87,0.4)"></span>BTC Overbought
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="chartWrap">
-                <div class="loading-overlay" id="loading">
-                    <div class="spinner"></div>
-                    데이터 로딩 중...
-                </div>
-                <canvas id="mainChart" style="display:none"></canvas>
+            <div class="chart-container-zscore">
+                <canvas id="zScoreChart"></canvas>
             </div>
         </div>
 
@@ -494,7 +522,7 @@
                 <div class="accordion-content">
                     <p>비트코인 가격은 <code>Price = a × Days^b</code> 형태의 멱법칙(Power Law)을 따르는 경향이 있습니다. 제네시스 블록(2009.01.03) 이후 경과 일수에 대해 로그-로그 회귀를 적용하여 추세선과 지지선을 산출합니다.</p>
                     <p><strong style="color:var(--trendline)">추세선</strong>은 장기 평균 궤적, <strong style="color:var(--support-line)">지지선</strong>은 역사적 바닥 근처의 하한 경계입니다. 가격이 지지선 아래로 내려간 적은 거의 없습니다.</p>
-                    <p><strong style="color:var(--accent-orange)">Gold/BTC Z-Score</strong>가 높을수록 금 대비 BTC가 저평가 구간, <strong style="color:var(--accent-blue)">Gold/Silver Z-Score</strong>는 금·은 비율의 극단치를 보여줍니다.</p>
+                    <p><strong style="color:var(--accent-orange)">Gold/BTC Z-Score</strong>가 <strong style="color:var(--accent-cyan)">+2σ 이상</strong>이면 금 대비 BTC가 저평가(Oversold) 구간, <strong style="color:var(--accent-red)">-2σ 이하</strong>이면 BTC 고평가(Overbought) 구간입니다. <strong style="color:var(--accent-blue)">Gold/Silver Z-Score</strong>는 금·은 비율의 극단치를 보여줍니다.</p>
                 </div>
             </div>
         </div>
@@ -769,18 +797,31 @@
                 el.className = 'stat-value ' + (lastGSZ.zScore >= 0 ? 'positive' : 'negative');
             }
 
-            // ─── BUILD CHART ───
+            // ─── WATERMARK PLUGIN ───
+            const watermarkPlugin = {
+                id: 'watermark',
+                afterDraw(chart) {
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.globalAlpha = 0.06;
+                    ctx.font = '600 28px JetBrains Mono';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const cx = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const cy = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                    ctx.fillText('Herdvibe.com', cx, cy);
+                    ctx.restore();
+                }
+            };
+
+            // ─── BUILD CHARTS (2-panel) ───
             document.getElementById('loading').style.display = 'none';
-            const canvas = document.getElementById('mainChart');
-            canvas.style.display = 'block';
+            const priceCanvas = document.getElementById('priceChart');
+            priceCanvas.style.display = 'block';
 
-            // Prepare data points
-            const btcPoints = btcWeekly.map(d => ({
-                x: d.date.getTime(),
-                y: d.price
-            }));
+            const btcPoints = btcWeekly.map(d => ({ x: d.date.getTime(), y: d.price }));
 
-            // Trendline points (from 2009 to 2029)
             const startDate = new Date('2009-07-01');
             const endDate = new Date('2029-12-31');
             const trendPoints = [];
@@ -795,247 +836,253 @@
                 d = new Date(d.getTime() + 7 * MS_PER_DAY);
             }
 
-            // Z-score bar data - scale to fit visual range
-            const zScaleMax = 4; // max Z-score for scaling
+            const goldBtcBarData = goldBtcZWeekly.map(d => ({ x: d.date.getTime(), y: d.zScore }));
+            const goldSlvBarData = goldSlvZWeekly.map(d => ({ x: d.date.getTime(), y: d.zScore }));
 
-            // Find BTC price range for bar scaling
-            const btcMin = 0.5;
-            const btcMax = 200000;
+            // ─── PEAK/TROUGH DETECTION ───
+            function detectCycleLabels(zData, minDist, thresh) {
+                const peaks = [], troughs = [];
+                for (let i = minDist; i < zData.length - Math.floor(minDist / 2); i++) {
+                    const val = zData[i].y;
+                    let isPeak = true, isTrough = true;
+                    const lo = Math.max(0, i - minDist);
+                    const hi = Math.min(zData.length - 1, i + minDist);
+                    for (let j = lo; j <= hi; j++) {
+                        if (j === i) continue;
+                        if (zData[j].y >= val) isPeak = false;
+                        if (zData[j].y <= val) isTrough = false;
+                    }
+                    if (isPeak && val > thresh) peaks.push(zData[i]);
+                    if (isTrough && val < -thresh) troughs.push(zData[i]);
+                }
 
-            // Create Z-score bar datasets mapped to the log price axis
-            // We'll use a secondary Y axis for the Z-scores
-            const goldBtcBarData = goldBtcZWeekly.map(d => ({
-                x: d.date.getTime(),
-                y: d.zScore
-            }));
+                // Merge, sort, alternate
+                const all = [
+                    ...peaks.map(p => ({ ...p, type: 'peak' })),
+                    ...troughs.map(t => ({ ...t, type: 'trough' }))
+                ].sort((a, b) => a.x - b.x);
 
-            const goldSlvBarData = goldSlvZWeekly.map(d => ({
-                x: d.date.getTime(),
-                y: d.zScore
-            }));
+                const filtered = [];
+                for (const pt of all) {
+                    if (filtered.length === 0 || filtered[filtered.length - 1].type !== pt.type) {
+                        filtered.push(pt);
+                    } else {
+                        const last = filtered[filtered.length - 1];
+                        if ((pt.type === 'peak' && pt.y > last.y) || (pt.type === 'trough' && pt.y < last.y)) {
+                            filtered[filtered.length - 1] = pt;
+                        }
+                    }
+                }
 
-            // $65k line
-            const line65k = 65000;
+                const annotations = {};
+                filtered.forEach((pt, i) => {
+                    annotations[`cycle_${i}`] = {
+                        type: 'label',
+                        xValue: pt.x,
+                        yValue: pt.y + (pt.type === 'peak' ? 0.7 : -0.7),
+                        content: `${pt.type === 'peak' ? '▲' : '▼'} ${pt.y >= 0 ? '+' : ''}${pt.y.toFixed(1)}σ`,
+                        color: pt.type === 'peak' ? 'rgba(0,212,170,0.85)' : 'rgba(255,71,87,0.85)',
+                        font: { family: 'JetBrains Mono', size: 8, weight: '600' },
+                        padding: { left: 3, right: 3, top: 2, bottom: 2 },
+                        backgroundColor: pt.type === 'peak' ? 'rgba(0,212,170,0.1)' : 'rgba(255,71,87,0.1)',
+                        borderRadius: 3
+                    };
+                });
+                return annotations;
+            }
 
-            const ctx = canvas.getContext('2d');
-            const chart = new Chart(ctx, {
+            const cycleAnnotations = detectCycleLabels(goldBtcBarData, 20, 1.3);
+
+            // ─── Common X-axis config ───
+            const xBase = {
+                type: 'time',
+                time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                min: new Date('2009-01-01').getTime(),
+                max: new Date('2029-12-31').getTime(),
+                grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 11 }, maxTicksLimit: 12 },
+                border: { color: 'rgba(255,255,255,0.1)' }
+            };
+
+            // ═══════════════════════════
+            // CHART 1: BTC Price + Power Law
+            // ═══════════════════════════
+            const priceChart = new Chart(priceCanvas.getContext('2d'), {
                 type: 'line',
+                plugins: [watermarkPlugin],
                 data: {
                     datasets: [
-                        // Z-Score bars (Gold/BTC) - on secondary axis
-                        {
-                            type: 'bar',
-                            label: 'Gold/BTC Z-Score',
-                            data: goldBtcBarData,
-                            backgroundColor: goldBtcBarData.map(d =>
-                                d.y >= 0 ? 'rgba(255, 107, 53, 0.7)' : 'rgba(255, 107, 53, 0.5)'
-                            ),
-                            borderColor: 'transparent',
-                            yAxisID: 'yZ',
-                            barPercentage: 1.0,
-                            categoryPercentage: 1.0,
-                            barThickness: 'flex',
-                            maxBarThickness: 4,
-                            order: 10
-                        },
-                        // Z-Score bars (Gold/Silver) - on secondary axis
-                        {
-                            type: 'bar',
-                            label: 'Gold/Silver Z-Score',
-                            data: goldSlvBarData,
-                            backgroundColor: goldSlvBarData.map(d =>
-                                d.y >= 0 ? 'rgba(77, 171, 247, 0.7)' : 'rgba(77, 171, 247, 0.5)'
-                            ),
-                            borderColor: 'transparent',
-                            yAxisID: 'yZ',
-                            barPercentage: 1.0,
-                            categoryPercentage: 1.0,
-                            barThickness: 'flex',
-                            maxBarThickness: 3,
-                            order: 9
-                        },
-                        // Support line
                         {
                             label: 'Power Law 지지선',
                             data: supportPoints,
-                            borderColor: 'rgba(255, 107, 53, 0.8)',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            tension: 0.4,
-                            fill: false,
-                            yAxisID: 'y',
-                            order: 3
+                            borderColor: 'rgba(255,107,53,0.8)',
+                            borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false, order: 3
                         },
-                        // Trendline
                         {
                             label: 'Power Law 추세선',
                             data: trendPoints,
-                            borderColor: 'rgba(0, 212, 170, 0.6)',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            borderDash: [8, 4],
-                            pointRadius: 0,
-                            tension: 0.4,
-                            fill: false,
-                            yAxisID: 'y',
-                            order: 2
+                            borderColor: 'rgba(0,212,170,0.6)',
+                            borderWidth: 2, borderDash: [8, 4], pointRadius: 0, tension: 0.4, fill: false, order: 2
                         },
-                        // Trendline fill area (between trend and support)
                         {
                             label: '_trendFill',
                             data: trendPoints,
                             borderColor: 'transparent',
-                            backgroundColor: 'rgba(0, 212, 170, 0.04)',
-                            borderWidth: 0,
-                            pointRadius: 0,
-                            tension: 0.4,
-                            fill: {
-                                target: 2, // fill to support line dataset index
-                                above: 'rgba(0, 212, 170, 0.04)'
-                            },
-                            yAxisID: 'y',
+                            backgroundColor: 'rgba(0,212,170,0.04)',
+                            borderWidth: 0, pointRadius: 0, tension: 0.4,
+                            fill: { target: 0, above: 'rgba(0,212,170,0.04)' },
                             order: 4
                         },
-                        // BTC price
                         {
                             label: 'Bitcoin',
                             data: btcPoints,
                             borderColor: '#f7931a',
-                            backgroundColor: 'transparent',
-                            borderWidth: 1.8,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            pointHoverBackgroundColor: '#f7931a',
-                            tension: 0.1,
-                            fill: false,
-                            yAxisID: 'y',
-                            order: 1
+                            borderWidth: 1.8, pointRadius: 0,
+                            pointHoverRadius: 4, pointHoverBackgroundColor: '#f7931a',
+                            tension: 0.1, fill: false, order: 1
                         }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: 'rgba(10,10,10,0.95)',
-                            titleColor: '#fff',
-                            bodyColor: '#ccc',
-                            borderColor: '#333',
-                            borderWidth: 1,
-                            padding: 14,
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 14,
                             displayColors: true,
-                            filter: (item) => !item.dataset.label.startsWith('_'),
+                            filter: item => !item.dataset.label.startsWith('_'),
                             callbacks: {
-                                title: (items) => {
-                                    if (items.length > 0) {
-                                        return new Date(items[0].parsed.x).toISOString().slice(0, 10);
-                                    }
-                                    return '';
-                                },
-                                label: (ctx) => {
-                                    const label = ctx.dataset.label;
-                                    if (label.startsWith('_')) return null;
-                                    if (label.includes('Z-Score')) {
-                                        return ` ${label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}σ`;
-                                    }
-                                    return ` ${label}: ${formatPrice(ctx.parsed.y)}`;
-                                }
+                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
+                                label: ctx => ctx.dataset.label.startsWith('_') ? null : ` ${ctx.dataset.label}: ${formatPrice(ctx.parsed.y)}`
                             }
                         },
                         annotation: {
                             annotations: {
                                 line65k: {
-                                    type: 'line',
-                                    yMin: 65000,
-                                    yMax: 65000,
-                                    yScaleID: 'y',
-                                    borderColor: 'rgba(255, 255, 255, 0.25)',
-                                    borderWidth: 1.5,
-                                    borderDash: [10, 6],
+                                    type: 'line', yMin: 65000, yMax: 65000,
+                                    borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1.5, borderDash: [10, 6],
                                     label: {
-                                        display: true,
-                                        content: 'line in the sand: $65k',
-                                        position: 'start',
-                                        backgroundColor: 'rgba(20,20,20,0.8)',
-                                        color: 'rgba(255,255,255,0.6)',
+                                        display: true, content: 'line in the sand: $65k', position: 'start',
+                                        backgroundColor: 'rgba(20,20,20,0.8)', color: 'rgba(255,255,255,0.6)',
                                         font: { family: 'JetBrains Mono', size: 10, weight: '500' },
-                                        padding: { left: 6, right: 6, top: 3, bottom: 3 },
-                                        borderRadius: 4
+                                        padding: { left: 6, right: 6, top: 3, bottom: 3 }, borderRadius: 4
                                     }
                                 }
                             }
                         }
                     },
                     scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: 'year',
-                                displayFormats: { year: 'yyyy' }
-                            },
-                            min: new Date('2009-01-01').getTime(),
-                            max: new Date('2029-12-31').getTime(),
-                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
-                            ticks: {
-                                color: '#666',
-                                font: { family: 'JetBrains Mono', size: 11 },
-                                maxTicksLimit: 12
-                            },
-                            border: { color: 'rgba(255,255,255,0.1)' }
-                        },
+                        x: { ...xBase, ticks: { ...xBase.ticks, display: false } },
                         y: {
-                            type: 'logarithmic',
-                            position: 'left',
-                            min: 0.5,
-                            max: 200000,
+                            type: 'logarithmic', position: 'left', min: 0.5, max: 200000,
                             grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
                             ticks: {
-                                color: '#888',
-                                font: { family: 'JetBrains Mono', size: 10 },
-                                callback: function(value) {
-                                    const vals = [1, 10, 100, 1000, 10000, 100000];
-                                    if (vals.includes(value)) return formatPrice(value);
-                                    return '';
-                                }
+                                color: '#888', font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => [1,10,100,1000,10000,100000].includes(v) ? formatPrice(v) : ''
                             },
-                            title: {
-                                display: true,
-                                text: 'Bitcoin price (USD)',
-                                color: '#666',
-                                font: { family: 'JetBrains Mono', size: 10 }
-                            },
+                            title: { display: true, text: 'Bitcoin price (USD)', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
                             border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+
+            // ═══════════════════════════
+            // CHART 2: Z-Score Panel
+            // ═══════════════════════════
+            const zScoreChart = new Chart(document.getElementById('zScoreChart').getContext('2d'), {
+                type: 'bar',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: 'Gold/BTC Z-Score',
+                            data: goldBtcBarData,
+                            backgroundColor: goldBtcBarData.map(d =>
+                                d.y >= 2 ? 'rgba(0,212,170,0.8)' :
+                                d.y <= -2 ? 'rgba(255,71,87,0.8)' :
+                                d.y >= 0 ? 'rgba(255,107,53,0.7)' : 'rgba(255,107,53,0.5)'
+                            ),
+                            borderColor: 'transparent',
+                            barPercentage: 1.0, categoryPercentage: 1.0,
+                            barThickness: 'flex', maxBarThickness: 4, order: 2
                         },
-                        yZ: {
-                            type: 'linear',
-                            position: 'right',
-                            min: -5,
-                            max: 12,
-                            grid: { display: false },
-                            ticks: {
-                                color: '#555',
-                                font: { family: 'JetBrains Mono', size: 10 },
-                                callback: function(value) {
-                                    if (Number.isInteger(value) && value >= -4 && value <= 4) {
-                                        return (value >= 0 ? '+' : '') + value + 'σ';
+                        {
+                            label: 'Gold/Silver Z-Score',
+                            data: goldSlvBarData,
+                            backgroundColor: goldSlvBarData.map(d =>
+                                d.y >= 0 ? 'rgba(77,171,247,0.6)' : 'rgba(77,171,247,0.4)'
+                            ),
+                            borderColor: 'transparent',
+                            barPercentage: 1.0, categoryPercentage: 1.0,
+                            barThickness: 'flex', maxBarThickness: 3, order: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
+                                label: ctx => {
+                                    const v = ctx.parsed.y;
+                                    const zone = v >= 2 ? ' (BTC Oversold)' : v <= -2 ? ' (BTC Overbought)' : '';
+                                    return ` ${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)}σ${zone}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                oversoldZone: {
+                                    type: 'box', yMin: 2, yMax: 5.5,
+                                    backgroundColor: 'rgba(0,212,170,0.05)',
+                                    borderColor: 'rgba(0,212,170,0.15)', borderWidth: 1, borderDash: [3, 3],
+                                    label: {
+                                        display: true, content: 'BTC Oversold (Gold/BTC ↑)',
+                                        position: { x: 'start', y: 'center' },
+                                        color: 'rgba(0,212,170,0.45)',
+                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
                                     }
-                                    return '';
                                 },
-                                stepSize: 2
+                                overboughtZone: {
+                                    type: 'box', yMin: -5.5, yMax: -2,
+                                    backgroundColor: 'rgba(255,71,87,0.05)',
+                                    borderColor: 'rgba(255,71,87,0.15)', borderWidth: 1, borderDash: [3, 3],
+                                    label: {
+                                        display: true, content: 'BTC Overbought (Gold/BTC ↓)',
+                                        position: { x: 'start', y: 'center' },
+                                        color: 'rgba(255,71,87,0.45)',
+                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
+                                    }
+                                },
+                                zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [4, 4] },
+                                plus2: { type: 'line', yMin: 2, yMax: 2, borderColor: 'rgba(0,212,170,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                minus2: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(255,71,87,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                ...cycleAnnotations
+                            }
+                        }
+                    },
+                    scales: {
+                        x: xBase,
+                        y: {
+                            type: 'linear', position: 'left', min: -5, max: 5,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#888', font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => Number.isInteger(v) ? (v >= 0 ? '+' : '') + v + 'σ' : '',
+                                stepSize: 1
                             },
-                            title: {
-                                display: true,
-                                text: '52w Z-Score',
-                                color: '#555',
-                                font: { family: 'JetBrains Mono', size: 10 }
-                            },
+                            title: { display: true, text: '52w Z-Score', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         }
                     }
