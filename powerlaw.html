@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비트코인 Power Law | HerdVibe</title>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="비트코인 Power Law - 멱법칙 분석">
+    <meta property="og:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC·Gold/Silver 52주 Z-Score 분석">
+    <meta property="og:url" content="https://herdvibe.com/112">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="HerdVibe">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="비트코인 Power Law - 멱법칙 분석">
+    <meta name="twitter:description" content="BTC 가격 멱법칙 추세선/지지선 + Gold/BTC·Gold/Silver 52주 Z-Score 분석">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --accent-orange: #ff6b35;
+            --accent-blue: #4dabf7;
+            --accent-cyan: #00d4aa;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffd43b;
+            --border-color: #2a2a2a;
+            --btc-line: #f7931a;
+            --trendline: #00d4aa;
+            --support-line: #ff6b35;
+        }
+
+        html, body { overflow-x: hidden; }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Main Chart Card */
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .chart-title-group h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .chart-title-group .subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Legend */
+        .legend-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-line.dashed {
+            background: repeating-linear-gradient(
+                90deg,
+                currentColor 0, currentColor 5px,
+                transparent 5px, transparent 8px
+            );
+            height: 2px;
+        }
+
+        .legend-bar {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            opacity: 0.8;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .stat-sub {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .stat-value.positive { color: var(--accent-cyan); }
+        .stat-value.negative { color: var(--accent-red); }
+        .stat-value.btc { color: var(--btc-line); }
+
+        /* Accordion */
+        .accordion {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            user-select: none;
+        }
+
+        .accordion-header:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .accordion-header h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .accordion-arrow {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+
+        .accordion.open .accordion-arrow {
+            transform: rotate(180deg);
+        }
+
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .accordion.open .accordion-body {
+            max-height: 500px;
+        }
+
+        .accordion-content {
+            padding: 0 20px 18px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .accordion-content p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-top: 14px;
+        }
+
+        .accordion-content code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            background: rgba(0,212,170,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Share */
+        .share-section {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-family: 'Noto Sans KR', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .share-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: #3a3a3a;
+            color: var(--text-primary);
+        }
+
+        .share-btn svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .share-btn.twitter { color: var(--text-secondary); }
+        .share-btn.twitter:hover { color: #fff; border-color: #555; }
+
+        .share-btn.telegram { color: #29b6f6; border-color: rgba(41,182,246,0.2); }
+        .share-btn.telegram:hover { background: rgba(41,182,246,0.08); border-color: rgba(41,182,246,0.4); }
+
+        .share-btn.instagram { color: #e1306c; border-color: rgba(225,48,108,0.2); }
+        .share-btn.instagram:hover { background: rgba(225,48,108,0.08); border-color: rgba(225,48,108,0.4); }
+
+        .share-btn.kakao { color: #fee500; border-color: rgba(254,229,0,0.2); }
+        .share-btn.kakao:hover { background: rgba(254,229,0,0.08); border-color: rgba(254,229,0,0.4); }
+
+        .share-btn.copy { color: var(--text-secondary); }
+        .share-btn.copy:hover { color: var(--accent-cyan); border-color: rgba(0,212,170,0.3); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            z-index: 9999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 500px;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--btc-line);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            .header { padding: 20px 0 15px; margin-bottom: 15px; }
+            .header h1 { font-size: 1.4rem; }
+            .header p { font-size: 0.75rem; }
+            .chart-card { padding: 15px 12px; border-radius: 10px; }
+            .chart-container { height: 380px; }
+            .legend-row { gap: 10px; }
+            .legend-item { font-size: 0.62rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat-card { padding: 12px 8px; }
+            .stat-value { font-size: 1.1rem; }
+            .stat-label { font-size: 0.65rem; }
+            .accordion-header { padding: 12px 15px; }
+            .accordion-header h3 { font-size: 0.82rem; }
+            .accordion-content { padding: 0 15px 14px; }
+            .accordion-content p { font-size: 0.73rem; }
+            .share-section { gap: 6px; }
+            .share-btn { padding: 8px 12px; font-size: 0.75rem; }
+            .footer { padding: 15px; font-size: 0.65rem; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .header h1 { font-size: 1.2rem; }
+            .chart-container { height: 320px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .stat-value { font-size: 1rem; }
+            .legend-item { font-size: 0.58rem; gap: 4px; }
+            .legend-line { width: 14px; }
+            .share-btn { padding: 7px 10px; font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>비트코인 Power Law</h1>
+            <p>BTC 가격 멱법칙 추세선·지지선 + Gold/BTC · Gold/Silver 52주 Z-Score</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-label">BTC 현재가</div>
+                <div class="stat-value btc" id="statPrice">--</div>
+                <div class="stat-sub" id="statDate">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Power Law 추세선</div>
+                <div class="stat-value" id="statTrend" style="color:var(--trendline)">--</div>
+                <div class="stat-sub" id="statTrendDiff">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Power Law 지지선</div>
+                <div class="stat-value" id="statSupport" style="color:var(--support-line)">--</div>
+                <div class="stat-sub" id="statSupportDiff">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gold/BTC Z-Score</div>
+                <div class="stat-value" id="statGoldBtc">--</div>
+                <div class="stat-sub" id="statGoldBtcLabel">52주 기준</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gold/Silver Z-Score</div>
+                <div class="stat-value" id="statGoldSilver">--</div>
+                <div class="stat-sub" id="statGoldSilverLabel">52주 기준</div>
+            </div>
+        </div>
+
+        <!-- Main Chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <h2>Bitcoin Price + Power Law Model</h2>
+                    <div class="subtitle" id="chartSubtitle">로그 스케일 · 주간 데이터</div>
+                </div>
+                <div class="legend-row">
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--btc-line)"></span>Bitcoin
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-line dashed" style="color:var(--trendline)"></span>추세선
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--support-line)"></span>지지선
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-bar" style="background:var(--accent-orange)"></span>Gold/BTC Z
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-bar" style="background:var(--accent-blue)"></span>Gold/Silver Z
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container" id="chartWrap">
+                <div class="loading-overlay" id="loading">
+                    <div class="spinner"></div>
+                    데이터 로딩 중...
+                </div>
+                <canvas id="mainChart" style="display:none"></canvas>
+            </div>
+        </div>
+
+        <!-- Accordion -->
+        <div class="accordion" id="infoAccordion">
+            <div class="accordion-header" onclick="toggleAccordion('infoAccordion')">
+                <h3>📐 Power Law 모델이란?</h3>
+                <span class="accordion-arrow">▼</span>
+            </div>
+            <div class="accordion-body">
+                <div class="accordion-content">
+                    <p>비트코인 가격은 <code>Price = a × Days^b</code> 형태의 멱법칙(Power Law)을 따르는 경향이 있습니다. 제네시스 블록(2009.01.03) 이후 경과 일수에 대해 로그-로그 회귀를 적용하여 추세선과 지지선을 산출합니다.</p>
+                    <p><strong style="color:var(--trendline)">추세선</strong>은 장기 평균 궤적, <strong style="color:var(--support-line)">지지선</strong>은 역사적 바닥 근처의 하한 경계입니다. 가격이 지지선 아래로 내려간 적은 거의 없습니다.</p>
+                    <p><strong style="color:var(--accent-orange)">Gold/BTC Z-Score</strong>가 높을수록 금 대비 BTC가 저평가 구간, <strong style="color:var(--accent-blue)">Gold/Silver Z-Score</strong>는 금·은 비율의 극단치를 보여줍니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share -->
+        <div class="share-section">
+            <button class="share-btn twitter" onclick="doShare('twitter')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                트위터
+            </button>
+            <button class="share-btn telegram" onclick="doShare('telegram')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                텔레그램
+            </button>
+            <button class="share-btn kakao" onclick="doShare('kakao')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.691c0 2.724 1.8 5.116 4.508 6.482-.144.525-.925 3.388-.958 3.603 0 0-.02.157.083.217.103.06.224.013.224.013.296-.041 3.434-2.263 3.973-2.652.703.098 1.428.15 2.17.15 5.523 0 10-3.463 10-7.813C22 6.463 17.523 3 12 3z"/></svg>
+                카카오톡
+            </button>
+            <button class="share-btn instagram" onclick="doShare('instagram')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                인스타그램
+            </button>
+            <button class="share-btn copy" onclick="doShare('copy')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                링크복사
+            </button>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+
+        <footer class="footer">
+            데이터 출처: Yahoo Finance | 매일 자동 업데이트
+        </footer>
+    </div>
+
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+    <script>
+        try { Kakao.init('a43ed7b39fac35458f4f9df925a279b5'); } catch(e) {}
+    </script>
+    <script>
+        // ─── CONSTANTS ───
+        const GENESIS = new Date('2009-01-03');
+        const MS_PER_DAY = 86400000;
+        const SHARE_URL = 'https://herdvibe.com/112';
+
+        // ─── DATA LOADING ───
+        async function loadCSV(filename) {
+            try {
+                const resp = await fetch(`data/${filename}`);
+                const text = await resp.text();
+                const lines = text.trim().replace(/\r/g, '').split('\n');
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    const dateStr = parts[0];
+                    const close = parseFloat(parts[1]);
+                    if (!isNaN(close) && dateStr) {
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) {
+                            data.push({ date, price: close });
+                        }
+                    }
+                }
+                data.sort((a, b) => a.date - b.date);
+                return data;
+            } catch (e) {
+                console.error(`Failed to load ${filename}:`, e);
+                return [];
+            }
+        }
+
+        // ─── WEEKLY RESAMPLE ───
+        function toWeekly(data) {
+            if (data.length === 0) return [];
+            const weekly = [];
+            let weekStart = null;
+            let weekData = [];
+
+            data.forEach(d => {
+                const day = d.date.getDay();
+                // Group by week (Sunday start)
+                const weekKey = new Date(d.date);
+                weekKey.setDate(weekKey.getDate() - weekKey.getDay());
+                const wk = weekKey.toISOString().slice(0, 10);
+
+                if (weekStart !== wk) {
+                    if (weekData.length > 0) {
+                        weekly.push(weekData[weekData.length - 1]); // last day of week
+                    }
+                    weekStart = wk;
+                    weekData = [d];
+                } else {
+                    weekData.push(d);
+                }
+            });
+            if (weekData.length > 0) {
+                weekly.push(weekData[weekData.length - 1]);
+            }
+            return weekly;
+        }
+
+        // ─── POWER LAW REGRESSION ───
+        function daysSinceGenesis(date) {
+            return (date - GENESIS) / MS_PER_DAY;
+        }
+
+        function linearRegression(xArr, yArr) {
+            const n = xArr.length;
+            let sx = 0, sy = 0, sxy = 0, sxx = 0, syy = 0;
+            for (let i = 0; i < n; i++) {
+                sx += xArr[i];
+                sy += yArr[i];
+                sxy += xArr[i] * yArr[i];
+                sxx += xArr[i] * xArr[i];
+                syy += yArr[i] * yArr[i];
+            }
+            const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+            const intercept = (sy - slope * sx) / n;
+
+            // residuals for std dev
+            let ssRes = 0;
+            for (let i = 0; i < n; i++) {
+                const predicted = intercept + slope * xArr[i];
+                ssRes += (yArr[i] - predicted) ** 2;
+            }
+            const stdDev = Math.sqrt(ssRes / n);
+
+            return { slope, intercept, stdDev };
+        }
+
+        function computePowerLaw(btcData) {
+            // Filter valid data (price > 0, days > 0)
+            const valid = btcData.filter(d => d.price > 0 && daysSinceGenesis(d.date) > 1);
+            const logDays = valid.map(d => Math.log10(daysSinceGenesis(d.date)));
+            const logPrice = valid.map(d => Math.log10(d.price));
+
+            const reg = linearRegression(logDays, logPrice);
+
+            return {
+                slope: reg.slope,
+                intercept: reg.intercept,
+                stdDev: reg.stdDev,
+                trendPrice: (days) => Math.pow(10, reg.intercept + reg.slope * Math.log10(days)),
+                supportPrice: (days) => Math.pow(10, (reg.intercept - 1.5 * reg.stdDev) + reg.slope * Math.log10(days))
+            };
+        }
+
+        // ─── Z-SCORE CALCULATION ───
+        function alignData(data1, data2) {
+            // Align two datasets by date (nearest date matching)
+            const map2 = {};
+            data2.forEach(d => {
+                const key = d.date.toISOString().slice(0, 10);
+                map2[key] = d.price;
+            });
+
+            const aligned = [];
+            data1.forEach(d => {
+                const key = d.date.toISOString().slice(0, 10);
+                if (map2[key] !== undefined) {
+                    aligned.push({ date: d.date, v1: d.price, v2: map2[key] });
+                }
+            });
+            return aligned;
+        }
+
+        function computeRatioZScore(ratioData, window = 252) {
+            // window = ~252 trading days = ~52 weeks
+            const results = [];
+            for (let i = window; i < ratioData.length; i++) {
+                const windowSlice = ratioData.slice(i - window, i);
+                const values = windowSlice.map(d => d.ratio);
+                const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                const std = Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length);
+
+                if (std > 0) {
+                    results.push({
+                        date: ratioData[i].date,
+                        zScore: (ratioData[i].ratio - mean) / std
+                    });
+                }
+            }
+            return results;
+        }
+
+        // ─── FORMAT HELPERS ───
+        function formatPrice(v) {
+            if (v >= 1000) return '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            if (v >= 1) return '$' + v.toFixed(2);
+            return '$' + v.toFixed(4);
+        }
+
+        function formatCompact(v) {
+            if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+            return '$' + v.toFixed(0);
+        }
+
+        // ─── MAIN ───
+        async function init() {
+            const [btcRaw, gldRaw, slvRaw] = await Promise.all([
+                loadCSV('BTC_USD.csv'),
+                loadCSV('GLD.csv'),
+                loadCSV('SLV.csv')
+            ]);
+
+            if (btcRaw.length === 0) {
+                document.getElementById('loading').innerHTML = '⚠️ 데이터를 불러올 수 없습니다';
+                return;
+            }
+
+            // Weekly BTC
+            const btcWeekly = toWeekly(btcRaw);
+
+            // Power Law
+            const pl = computePowerLaw(btcWeekly);
+
+            // Gold/BTC ratio Z-Score
+            const goldBtcAligned = alignData(gldRaw, btcRaw);
+            const goldBtcRatio = goldBtcAligned.map(d => ({
+                date: d.date,
+                ratio: d.v1 / d.v2
+            }));
+            const goldBtcZ = computeRatioZScore(goldBtcRatio);
+
+            // Gold/Silver ratio Z-Score
+            const goldSlvAligned = alignData(gldRaw, slvRaw);
+            const goldSlvRatio = goldSlvAligned.map(d => ({
+                date: d.date,
+                ratio: d.v1 / d.v2
+            }));
+            const goldSlvZ = computeRatioZScore(goldSlvRatio);
+
+            // Resample Z-scores to weekly for cleaner bars
+            const goldBtcZWeekly = toWeekly(goldBtcZ.map(d => ({ date: d.date, price: d.zScore })))
+                .map(d => ({ date: d.date, zScore: d.price }));
+            const goldSlvZWeekly = toWeekly(goldSlvZ.map(d => ({ date: d.date, price: d.zScore })))
+                .map(d => ({ date: d.date, zScore: d.price }));
+
+            // Update stats
+            const lastBtc = btcRaw[btcRaw.length - 1];
+            const lastDays = daysSinceGenesis(lastBtc.date);
+            const trendNow = pl.trendPrice(lastDays);
+            const supportNow = pl.supportPrice(lastDays);
+
+            document.getElementById('statPrice').textContent = formatPrice(lastBtc.price);
+            document.getElementById('statDate').textContent = lastBtc.date.toISOString().slice(0, 10);
+
+            document.getElementById('statTrend').textContent = formatPrice(trendNow);
+            const trendDiff = ((lastBtc.price - trendNow) / trendNow * 100);
+            document.getElementById('statTrendDiff').textContent =
+                `${trendDiff >= 0 ? '+' : ''}${trendDiff.toFixed(1)}% vs 추세선`;
+            document.getElementById('statTrendDiff').style.color =
+                trendDiff >= 0 ? 'var(--accent-cyan)' : 'var(--accent-red)';
+
+            document.getElementById('statSupport').textContent = formatPrice(supportNow);
+            const supportDiff = ((lastBtc.price - supportNow) / supportNow * 100);
+            document.getElementById('statSupportDiff').textContent =
+                `${supportDiff >= 0 ? '+' : ''}${supportDiff.toFixed(1)}% vs 지지선`;
+
+            if (goldBtcZWeekly.length > 0) {
+                const lastGBZ = goldBtcZWeekly[goldBtcZWeekly.length - 1];
+                const el = document.getElementById('statGoldBtc');
+                el.textContent = (lastGBZ.zScore >= 0 ? '+' : '') + lastGBZ.zScore.toFixed(2);
+                el.className = 'stat-value ' + (lastGBZ.zScore >= 0 ? 'positive' : 'negative');
+            }
+
+            if (goldSlvZWeekly.length > 0) {
+                const lastGSZ = goldSlvZWeekly[goldSlvZWeekly.length - 1];
+                const el = document.getElementById('statGoldSilver');
+                el.textContent = (lastGSZ.zScore >= 0 ? '+' : '') + lastGSZ.zScore.toFixed(2);
+                el.className = 'stat-value ' + (lastGSZ.zScore >= 0 ? 'positive' : 'negative');
+            }
+
+            // ─── BUILD CHART ───
+            document.getElementById('loading').style.display = 'none';
+            const canvas = document.getElementById('mainChart');
+            canvas.style.display = 'block';
+
+            // Prepare data points
+            const btcPoints = btcWeekly.map(d => ({
+                x: d.date.getTime(),
+                y: d.price
+            }));
+
+            // Trendline points (from 2009 to 2029)
+            const startDate = new Date('2009-07-01');
+            const endDate = new Date('2029-12-31');
+            const trendPoints = [];
+            const supportPoints = [];
+            let d = new Date(startDate);
+            while (d <= endDate) {
+                const days = daysSinceGenesis(d);
+                if (days > 1) {
+                    trendPoints.push({ x: d.getTime(), y: pl.trendPrice(days) });
+                    supportPoints.push({ x: d.getTime(), y: pl.supportPrice(days) });
+                }
+                d = new Date(d.getTime() + 7 * MS_PER_DAY);
+            }
+
+            // Z-score bar data - scale to fit visual range
+            const zScaleMax = 4; // max Z-score for scaling
+
+            // Find BTC price range for bar scaling
+            const btcMin = 0.5;
+            const btcMax = 200000;
+
+            // Create Z-score bar datasets mapped to the log price axis
+            // We'll use a secondary Y axis for the Z-scores
+            const goldBtcBarData = goldBtcZWeekly.map(d => ({
+                x: d.date.getTime(),
+                y: d.zScore
+            }));
+
+            const goldSlvBarData = goldSlvZWeekly.map(d => ({
+                x: d.date.getTime(),
+                y: d.zScore
+            }));
+
+            // $65k line
+            const line65k = 65000;
+
+            const ctx = canvas.getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        // Z-Score bars (Gold/BTC) - on secondary axis
+                        {
+                            type: 'bar',
+                            label: 'Gold/BTC Z-Score',
+                            data: goldBtcBarData,
+                            backgroundColor: goldBtcBarData.map(d =>
+                                d.y >= 0 ? 'rgba(255, 107, 53, 0.7)' : 'rgba(255, 107, 53, 0.5)'
+                            ),
+                            borderColor: 'transparent',
+                            yAxisID: 'yZ',
+                            barPercentage: 1.0,
+                            categoryPercentage: 1.0,
+                            barThickness: 'flex',
+                            maxBarThickness: 4,
+                            order: 10
+                        },
+                        // Z-Score bars (Gold/Silver) - on secondary axis
+                        {
+                            type: 'bar',
+                            label: 'Gold/Silver Z-Score',
+                            data: goldSlvBarData,
+                            backgroundColor: goldSlvBarData.map(d =>
+                                d.y >= 0 ? 'rgba(77, 171, 247, 0.7)' : 'rgba(77, 171, 247, 0.5)'
+                            ),
+                            borderColor: 'transparent',
+                            yAxisID: 'yZ',
+                            barPercentage: 1.0,
+                            categoryPercentage: 1.0,
+                            barThickness: 'flex',
+                            maxBarThickness: 3,
+                            order: 9
+                        },
+                        // Support line
+                        {
+                            label: 'Power Law 지지선',
+                            data: supportPoints,
+                            borderColor: 'rgba(255, 107, 53, 0.8)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y',
+                            order: 3
+                        },
+                        // Trendline
+                        {
+                            label: 'Power Law 추세선',
+                            data: trendPoints,
+                            borderColor: 'rgba(0, 212, 170, 0.6)',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [8, 4],
+                            pointRadius: 0,
+                            tension: 0.4,
+                            fill: false,
+                            yAxisID: 'y',
+                            order: 2
+                        },
+                        // Trendline fill area (between trend and support)
+                        {
+                            label: '_trendFill',
+                            data: trendPoints,
+                            borderColor: 'transparent',
+                            backgroundColor: 'rgba(0, 212, 170, 0.04)',
+                            borderWidth: 0,
+                            pointRadius: 0,
+                            tension: 0.4,
+                            fill: {
+                                target: 2, // fill to support line dataset index
+                                above: 'rgba(0, 212, 170, 0.04)'
+                            },
+                            yAxisID: 'y',
+                            order: 4
+                        },
+                        // BTC price
+                        {
+                            label: 'Bitcoin',
+                            data: btcPoints,
+                            borderColor: '#f7931a',
+                            backgroundColor: 'transparent',
+                            borderWidth: 1.8,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: '#f7931a',
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: 'y',
+                            order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 14,
+                            displayColors: true,
+                            filter: (item) => !item.dataset.label.startsWith('_'),
+                            callbacks: {
+                                title: (items) => {
+                                    if (items.length > 0) {
+                                        return new Date(items[0].parsed.x).toISOString().slice(0, 10);
+                                    }
+                                    return '';
+                                },
+                                label: (ctx) => {
+                                    const label = ctx.dataset.label;
+                                    if (label.startsWith('_')) return null;
+                                    if (label.includes('Z-Score')) {
+                                        return ` ${label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}σ`;
+                                    }
+                                    return ` ${label}: ${formatPrice(ctx.parsed.y)}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                line65k: {
+                                    type: 'line',
+                                    yMin: 65000,
+                                    yMax: 65000,
+                                    yScaleID: 'y',
+                                    borderColor: 'rgba(255, 255, 255, 0.25)',
+                                    borderWidth: 1.5,
+                                    borderDash: [10, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'line in the sand: $65k',
+                                        position: 'start',
+                                        backgroundColor: 'rgba(20,20,20,0.8)',
+                                        color: 'rgba(255,255,255,0.6)',
+                                        font: { family: 'JetBrains Mono', size: 10, weight: '500' },
+                                        padding: { left: 6, right: 6, top: 3, bottom: 3 },
+                                        borderRadius: 4
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'year',
+                                displayFormats: { year: 'yyyy' }
+                            },
+                            min: new Date('2009-01-01').getTime(),
+                            max: new Date('2029-12-31').getTime(),
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#666',
+                                font: { family: 'JetBrains Mono', size: 11 },
+                                maxTicksLimit: 12
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            type: 'logarithmic',
+                            position: 'left',
+                            min: 0.5,
+                            max: 200000,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#888',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: function(value) {
+                                    const vals = [1, 10, 100, 1000, 10000, 100000];
+                                    if (vals.includes(value)) return formatPrice(value);
+                                    return '';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Bitcoin price (USD)',
+                                color: '#666',
+                                font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yZ: {
+                            type: 'linear',
+                            position: 'right',
+                            min: -5,
+                            max: 12,
+                            grid: { display: false },
+                            ticks: {
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: function(value) {
+                                    if (Number.isInteger(value) && value >= -4 && value <= 4) {
+                                        return (value >= 0 ? '+' : '') + value + 'σ';
+                                    }
+                                    return '';
+                                },
+                                stepSize: 2
+                            },
+                            title: {
+                                display: true,
+                                text: '52w Z-Score',
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+
+        }
+
+        // ─── ACCORDION ───
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('open');
+        }
+
+        // ─── SHARE (3-fallback for iframe) ───
+        function openUrl(url) {
+            try {
+                const a = document.createElement('a');
+                a.href = url;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch(e) {
+                try { window.open(url, '_blank'); } catch(e2) {}
+            }
+        }
+
+        function doCopy(text) {
+            // 1차: postMessage to parent (iframe 환경)
+            try { window.parent.postMessage({ type: 'clipboard', text: text }, '*'); } catch(e) {}
+            // 2차: Clipboard API
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text); return;
+                }
+            } catch(e) {}
+            // 3차: execCommand
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.cssText = 'position:fixed;left:0;top:0;opacity:0;width:1px;height:1px;';
+                document.body.appendChild(ta);
+                ta.select();
+                ta.setSelectionRange(0, ta.value.length);
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch(e) {
+                window.prompt('아래 링크를 복사하세요:', text);
+            }
+        }
+
+        function doShare(platform) {
+            const t = '비트코인 Power Law 멱법칙 분석 — HerdVibe';
+            switch(platform) {
+                case 'twitter':
+                    openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(SHARE_URL)}`);
+                    break;
+                case 'telegram':
+                    openUrl(`https://t.me/share/url?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent(t)}`);
+                    break;
+                case 'kakao':
+                    kakaoShare();
+                    break;
+                case 'instagram':
+                    doCopy(SHARE_URL);
+                    openUrl('https://www.instagram.com/');
+                    showToast('링크가 복사되었습니다 — 인스타그램 스토리에 붙여넣기 하세요');
+                    break;
+                case 'copy':
+                    doCopy(SHARE_URL);
+                    showToast('링크가 복사되었습니다');
+                    break;
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function kakaoShare() {
+            try {
+                Kakao.Share.sendDefault({
+                    objectType: 'feed',
+                    content: {
+                        title: '비트코인 Power Law 멱법칙 분석',
+                        description: 'BTC 가격 멱법칙 추세선·지지선 + Gold/BTC·Gold/Silver Z-Score',
+                        imageUrl: '',
+                        link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL }
+                    },
+                    buttons: [{ title: '차트 보기', link: { mobileWebUrl: SHARE_URL, webUrl: SHARE_URL } }]
+                });
+            } catch(e) {
+                openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(SHARE_URL)}`);
+            }
+        }
+
+        // ─── INIT ───
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
