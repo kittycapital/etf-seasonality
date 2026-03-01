@@ -51,7 +51,7 @@
 
         html, body { overflow-x: hidden; }
 
-        .zoom-reset-btn{position:absolute;top:12px;right:12px;z-index:10;padding:5px 12px;background:rgba(255,255,255,0.08);border:1px solid var(--border-color);border-radius:6px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;display:none}
+        .zoom-reset-btn{z-index:10;padding:5px 12px;background:rgba(255,255,255,0.08);border:1px solid var(--border-color);border-radius:6px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;display:none;flex-shrink:0;align-self:center}
         .zoom-reset-btn:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:var(--accent-cyan)}
         .zoom-hint{text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;font-family:'JetBrains Mono',monospace}
 
@@ -339,6 +339,8 @@
             .share-section { gap: 6px; }
             .share-btn { padding: 8px 12px; font-size: 0.75rem; }
             .footer { padding: 15px; font-size: 0.65rem; }
+            .zoom-reset-btn { margin:0; }
+            .chart-title-group h2 { font-size: 1rem; }
         }
 
         @media (max-width: 480px) {
@@ -389,12 +391,12 @@
 
         <!-- Main Price Chart -->
         <div class="chart-card" style="padding-bottom:8px; margin-bottom:0; border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom:none; position:relative;">
-            <button class="zoom-reset-btn" id="zoomResetBtn" onclick="resetZoom()">↺ Reset Zoom</button>
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>Bitcoin Price + Power Law Model</h2>
                     <div class="subtitle" id="chartSubtitle">로그 스케일 · 주간 데이터</div>
                 </div>
+                <button class="zoom-reset-btn" id="zoomResetBtn" onclick="resetZoom()">↺ Reset Zoom</button>
                 <div class="legend-row">
                     <div class="legend-item">
                         <span class="legend-line" style="background:var(--btc-line)"></span>Bitcoin
