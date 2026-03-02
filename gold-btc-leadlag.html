@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>금-비트코인 선행성 분석 | HerdVibe</title>
+    <title>금 vs 비트코인 YoY 선행성 분석 | HerdVibe</title>
 
     <!-- Open Graph -->
-    <meta property="og:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
-    <meta property="og:description" content="Gold/BTC 비율 변화가 비트코인 가격을 얼마나 먼저 예고하는가? Cross-Correlation 및 Z-Score 오버레이 분석">
+    <meta property="og:title" content="금 vs 비트코인 YoY 선행성 분석">
+    <meta property="og:description" content="금과 비트코인의 연간 수익률(YoY)을 비교하여 어느 자산이 선행하는지 분석합니다">
     <meta property="og:url" content="https://herdvibe.com/113">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="HerdVibe">
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="금-비트코인 선행성 분석 - Gold-BTC Lead-Lag">
-    <meta name="twitter:description" content="Gold/BTC 비율 변화가 비트코인 가격을 얼마나 먼저 예고하는가? Cross-Correlation 및 Z-Score 오버레이 분석">
+    <meta name="twitter:title" content="금 vs 비트코인 YoY 선행성 분석">
+    <meta name="twitter:description" content="금과 비트코인의 연간 수익률(YoY)을 비교하여 어느 자산이 선행하는지 분석합니다">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -43,7 +43,8 @@
             --accent-yellow: #ffd43b;
             --accent-gold: #d4a843;
             --border-color: #2a2a2a;
-            --btc-line: #f7931a;
+            --btc-color: #f7931a;
+            --gold-color: #d4a843;
         }
 
         html, body { overflow-x: hidden; }
@@ -78,12 +79,15 @@
             color: #ffffff;
         }
 
+        .header h1 .gold { color: var(--gold-color); }
+        .header h1 .btc { color: var(--btc-color); }
+
         .header p {
             color: var(--text-secondary);
             font-size: 0.85rem;
         }
 
-        /* Stats */
+        /* Stats Row */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -113,7 +117,8 @@
             font-weight: 700;
         }
 
-        .stat-value.gold { color: var(--accent-gold); }
+        .stat-value.gold { color: var(--gold-color); }
+        .stat-value.btc { color: var(--btc-color); }
         .stat-value.positive { color: var(--accent-cyan); }
         .stat-value.negative { color: var(--accent-red); }
         .stat-value.neutral { color: var(--accent-orange); }
@@ -175,20 +180,14 @@
 
         .legend-line {
             width: 18px;
-            height: 2px;
-            border-radius: 1px;
-        }
-
-        .legend-bar {
-            width: 10px;
-            height: 10px;
+            height: 3px;
             border-radius: 2px;
         }
 
         .chart-container {
             position: relative;
             width: 100%;
-            height: 380px;
+            height: 420px;
         }
 
         .chart-container-sm {
@@ -220,15 +219,16 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Slider */
+        /* Slider Section */
         .slider-section {
             display: flex;
             align-items: center;
             gap: 14px;
             margin: 12px 0 4px;
-            padding: 12px 16px;
+            padding: 14px 16px;
             background: var(--bg-tertiary);
             border-radius: 8px;
+            flex-wrap: wrap;
         }
 
         .slider-label {
@@ -240,15 +240,27 @@
 
         .slider-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: var(--accent-gold);
-            min-width: 70px;
+            min-width: 90px;
             text-align: center;
+        }
+
+        .slider-corr {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .slider-corr .val {
+            font-weight: 600;
         }
 
         input[type="range"] {
             flex: 1;
+            min-width: 120px;
             height: 4px;
             -webkit-appearance: none;
             appearance: none;
@@ -259,17 +271,17 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             background: var(--accent-gold);
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 6px rgba(212, 168, 67, 0.4);
+            box-shadow: 0 0 8px rgba(212, 168, 67, 0.4);
         }
 
         input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             background: var(--accent-gold);
             border-radius: 50%;
             cursor: pointer;
@@ -279,7 +291,7 @@
         .optimal-btn {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.68rem;
-            padding: 5px 10px;
+            padding: 6px 12px;
             background: rgba(212, 168, 67, 0.12);
             border: 1px solid rgba(212, 168, 67, 0.3);
             color: var(--accent-gold);
@@ -292,6 +304,52 @@
         .optimal-btn:hover {
             background: rgba(212, 168, 67, 0.2);
             border-color: var(--accent-gold);
+        }
+
+        .reset-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #3a3a3a;
+            color: var(--text-primary);
+        }
+
+        /* Interpretation box */
+        .interpretation {
+            margin-top: 12px;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-gold);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .interpretation .highlight {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .interpretation .gold-tag {
+            color: var(--gold-color);
+            font-weight: 600;
+        }
+
+        .interpretation .btc-tag {
+            color: var(--btc-color);
+            font-weight: 600;
         }
 
         /* Tab buttons */
@@ -324,6 +382,64 @@
             color: var(--text-primary);
         }
 
+        /* Correlation heatmap bar */
+        .corr-bar-section {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+
+        .corr-bar-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .corr-bar-container {
+            display: flex;
+            gap: 2px;
+            height: 32px;
+            align-items: stretch;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .corr-bar-item {
+            flex: 1;
+            min-width: 0;
+            position: relative;
+            transition: all 0.15s;
+        }
+
+        .corr-bar-item:hover {
+            transform: scaleY(1.15);
+            z-index: 2;
+        }
+
+        .corr-bar-item.active {
+            outline: 2px solid #fff;
+            outline-offset: -1px;
+            z-index: 3;
+        }
+
+        .corr-bar-tooltip {
+            position: fixed;
+            background: rgba(10,10,10,0.95);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: #ccc;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            white-space: nowrap;
+        }
+
         /* Share */
         .share-section {
             display: flex;
@@ -351,7 +467,6 @@
 
         .share-btn:hover { background: var(--bg-tertiary); border-color: #3a3a3a; color: var(--text-primary); }
         .share-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
-        .share-btn.twitter { color: var(--text-secondary); }
         .share-btn.twitter:hover { color: #fff; border-color: #555; }
         .share-btn.telegram { color: #29b6f6; border-color: rgba(41,182,246,0.2); }
         .share-btn.telegram:hover { background: rgba(41,182,246,0.08); border-color: rgba(41,182,246,0.4); }
@@ -359,7 +474,6 @@
         .share-btn.kakao:hover { background: rgba(254,229,0,0.08); border-color: rgba(254,229,0,0.4); }
         .share-btn.instagram { color: #e1306c; border-color: rgba(225,48,108,0.2); }
         .share-btn.instagram:hover { background: rgba(225,48,108,0.08); border-color: rgba(225,48,108,0.4); }
-        .share-btn.copy { color: var(--text-secondary); }
         .share-btn.copy:hover { color: var(--accent-cyan); border-color: rgba(0,212,170,0.3); }
 
         /* Toast */
@@ -396,34 +510,28 @@
         @media (max-width: 768px) {
             .container { padding: 12px; }
             .header { padding: 20px 0 15px; margin-bottom: 15px; }
-            .header h1 { font-size: 1.4rem; }
+            .header h1 { font-size: 1.3rem; }
             .header p { font-size: 0.75rem; }
             .chart-card { padding: 15px 12px; border-radius: 10px; }
-            .chart-container { height: 320px; }
+            .chart-container { height: 340px; }
             .chart-container-sm { height: 260px; }
-            .legend-row { gap: 10px; }
-            .legend-item { font-size: 0.62rem; }
             .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            .stat-card { padding: 12px 8px; }
             .stat-value { font-size: 1.1rem; }
-            .stat-label { font-size: 0.65rem; }
-            .share-section { gap: 6px; }
-            .share-btn { padding: 8px 12px; font-size: 0.75rem; }
-            .slider-section { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+            .slider-section { gap: 8px; padding: 10px 12px; }
             .slider-label { font-size: 0.68rem; }
-        }
-
-        @media (max-width: 480px) {
-            .container { padding: 10px; }
-            .header h1 { font-size: 1.2rem; }
-            .chart-container { height: 280px; }
-            .chart-container-sm { height: 220px; }
-            .stats-row { grid-template-columns: repeat(2, 1fr); }
-            .stat-value { font-size: 1rem; }
-            .legend-item { font-size: 0.58rem; gap: 4px; }
+            .slider-value { font-size: 0.78rem; min-width: 70px; }
+            .legend-item { font-size: 0.62rem; }
             .share-section { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
             .share-btn { padding: 8px 4px; font-size: 0.65rem; justify-content: center; }
             .share-btn svg { width: 12px; height: 12px; }
+            .interpretation { font-size: 0.73rem; padding: 10px 12px; }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.1rem; }
+            .chart-container { height: 280px; }
+            .chart-container-sm { height: 220px; }
+            .stat-value { font-size: 0.95rem; }
             .tab-btn { padding: 5px 10px; font-size: 0.65rem; }
         }
     </style>
@@ -431,90 +539,112 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1>금-비트코인 선행성 분석</h1>
-            <p>Gold/BTC Ratio Lead-Lag · Gold/BTC 비율 변화가 BTC 가격을 얼마나 먼저 예고하는가?</p>
+            <h1><span class="gold">Gold</span> vs <span class="btc">Bitcoin</span> YoY 선행성 분석</h1>
+            <p>금과 비트코인의 연간 수익률(YoY)을 비교 · 금의 타임라인을 이동시켜 선행/후행 관계를 분석합니다</p>
         </header>
 
         <!-- Stats -->
-        <div class="stats-row" id="statsRow">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-label">금 현재 YoY</div>
+                <div class="stat-value gold" id="statGoldYoY">--</div>
+                <div class="stat-sub" id="statGoldSub">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">BTC 현재 YoY</div>
+                <div class="stat-value btc" id="statBtcYoY">--</div>
+                <div class="stat-sub" id="statBtcSub">--</div>
+            </div>
             <div class="stat-card">
                 <div class="stat-label">최적 선행 기간</div>
-                <div class="stat-value gold" id="statLag">--</div>
-                <div class="stat-sub" id="statLagSub">금 → BTC</div>
+                <div class="stat-value" id="statOptLag">--</div>
+                <div class="stat-sub" id="statOptLagSub">--</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">최적 Lag 상관계수</div>
-                <div class="stat-value" id="statCorr">--</div>
-                <div class="stat-sub" id="statCorrSub">--</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Gold/BTC 비율 Z-Score</div>
-                <div class="stat-value" id="statGoldChg">--</div>
-                <div class="stat-sub">52주 롤링 기준</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">BTC 시그널</div>
-                <div class="stat-value" id="statSignal">--</div>
-                <div class="stat-sub" id="statSignalSub">--</div>
+                <div class="stat-label">최적 상관계수</div>
+                <div class="stat-value" id="statOptCorr">--</div>
+                <div class="stat-sub" id="statOptCorrSub">--</div>
             </div>
         </div>
 
-        <!-- Chart 1: Cross-Correlation -->
+        <!-- Chart 1: YoY Overlay with Lag Slider -->
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title-group">
-                    <h2>Cross-Correlation: Gold/BTC 비율 변화 → BTC 수익률</h2>
-                    <div class="subtitle">Gold/BTC 비율 주간 변화율 vs BTC 주간 수익률 · Lag (+) = 비율 변화 선행</div>
+                    <h2>Gold YoY vs Bitcoin YoY — 시차 오버레이</h2>
+                    <div class="subtitle">금의 YoY 수익률 타임라인을 이동시켜 비트코인과의 선행/후행 관계를 확인하세요</div>
                 </div>
-                <div class="tab-row" id="corrTabs">
-                    <button class="tab-btn active" data-period="all" onclick="switchCorrPeriod('all')">전체</button>
-                    <button class="tab-btn" data-period="5y" onclick="switchCorrPeriod('5y')">5Y</button>
-                    <button class="tab-btn" data-period="3y" onclick="switchCorrPeriod('3y')">3Y</button>
-                    <button class="tab-btn" data-period="1y" onclick="switchCorrPeriod('1y')">1Y</button>
+                <div class="legend-row">
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--btc-color)"></span>BTC YoY
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-line" style="background:var(--gold-color)"></span>Gold YoY (시차 적용)
+                    </div>
                 </div>
             </div>
-            <div class="chart-container" id="corrChartWrap">
+
+            <div class="slider-section">
+                <span class="slider-label">Gold 시차:</span>
+                <input type="range" id="lagSlider" min="-12" max="24" value="0" step="1" oninput="updateLag(this.value)">
+                <span class="slider-value" id="lagDisplay">0개월 (동시)</span>
+                <span class="slider-corr" id="lagCorr">r = <span class="val">--</span></span>
+                <button class="optimal-btn" id="optimalBtn" onclick="setOptimalLag()">최적값 적용</button>
+                <button class="reset-btn" onclick="resetLag()">초기화</button>
+            </div>
+
+            <!-- Correlation mini-heatmap -->
+            <div class="corr-bar-section">
+                <div class="corr-bar-label">시차별 상관계수 (-12M ~ +24M) · 클릭하여 이동</div>
+                <div class="corr-bar-container" id="corrBar"></div>
+            </div>
+            <div class="corr-bar-tooltip" id="corrTooltip"></div>
+
+            <div class="chart-container" id="mainChartWrap">
                 <div class="loading-overlay" id="loading">
                     <div class="spinner"></div>
                     데이터 로딩 중...
                 </div>
-                <canvas id="corrChart" style="display:none"></canvas>
+                <canvas id="mainChart" style="display:none"></canvas>
+            </div>
+
+            <div class="interpretation" id="interpretation">
+                분석 결과 로딩 중...
             </div>
         </div>
 
-        <!-- Chart 2: Overlay -->
+        <!-- Chart 2: Cross-Correlation Bar Chart -->
         <div class="chart-card">
             <div class="chart-header">
                 <div class="chart-title-group">
-                    <h2>시차 적용 오버레이</h2>
-                    <div class="subtitle" id="overlaySubtitle">Gold/BTC 비율 Z-Score vs BTC 가격 Z-Score · 시차 적용</div>
+                    <h2>YoY 상관계수 분포</h2>
+                    <div class="subtitle">Gold YoY를 N개월 이동 시 BTC YoY와의 Pearson 상관계수 · (+) = Gold 선행</div>
+                </div>
+                <div class="tab-row" id="corrTabs">
+                    <button class="tab-btn active" data-period="all" onclick="switchPeriod('all')">전체</button>
+                    <button class="tab-btn" data-period="5y" onclick="switchPeriod('5y')">5Y</button>
+                    <button class="tab-btn" data-period="3y" onclick="switchPeriod('3y')">3Y</button>
+                </div>
+            </div>
+            <div class="chart-container-sm">
+                <canvas id="corrChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart 3: Rolling Correlation -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title-group">
+                    <h2>롤링 최적 선행 기간 변화</h2>
+                    <div class="subtitle">3년 롤링 윈도우 기준 · 금이 비트코인에 대해 최적 선행하는 개월 수 추적</div>
                 </div>
                 <div class="legend-row">
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--btc-line)"></span>BTC 가격 Z-Score
+                        <span class="legend-line" style="background:var(--gold-color)"></span>최적 Lag (월)
                     </div>
                     <div class="legend-item">
-                        <span class="legend-line" style="background:var(--accent-gold)"></span>Gold/BTC 비율 Z-Score (반전 · 시차)
+                        <span class="legend-line" style="background:rgba(0,212,170,0.6);border-top:1px dashed rgba(0,212,170,0.6)"></span>상관계수
                     </div>
-                </div>
-            </div>
-            <div class="slider-section">
-                <span class="slider-label">시차 (Lag):</span>
-                <input type="range" id="lagSlider" min="0" max="52" value="12" oninput="updateOverlay(this.value)">
-                <span class="slider-value" id="lagDisplay">12주</span>
-                <button class="optimal-btn" id="optimalBtn" onclick="setOptimalLag()">최적값 적용</button>
-            </div>
-            <div class="chart-container">
-                <canvas id="overlayChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Chart 3: Rolling Lag -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title-group">
-                    <h2>롤링 최적 Lag 타임라인</h2>
-                    <div class="subtitle">104주 롤링 윈도우 · Gold/BTC 비율 변화 → BTC 수익률 선행 기간 추적</div>
                 </div>
             </div>
             <div class="chart-container-sm">
@@ -546,11 +676,11 @@
             </button>
         </div>
 
-        <!-- Toast -->
         <div class="toast" id="toast"></div>
 
         <footer class="footer">
-            데이터 출처: Yahoo Finance (GLD, BTC-USD) | 매일 자동 업데이트
+            데이터 출처: Yahoo Finance (GLD, BTC-USD) | 매일 자동 업데이트<br>
+            ※ 본 분석은 참고용이며 투자 조언이 아닙니다. 투자의 책임은 본인에게 있습니다.
         </footer>
     </div>
 
@@ -561,7 +691,9 @@
     <script>
         // ─── CONSTANTS ───
         const SHARE_URL = 'https://herdvibe.com/113';
-        const MAX_LAG = 52; // weeks
+        const MIN_LAG = -12;   // Gold lags BTC by 12 months
+        const MAX_LAG = 24;    // Gold leads BTC by 24 months
+        const YOY_PERIOD = 365; // days for YoY calculation
 
         // ─── DATA LOADING ───
         async function loadCSV(filename) {
@@ -587,100 +719,127 @@
             }
         }
 
-        // ─── WEEKLY RESAMPLE ───
-        function toWeekly(data) {
-            if (data.length === 0) return [];
-            const weekly = [];
-            let weekStart = null, weekData = [];
-            data.forEach(d => {
-                const wk = new Date(d.date);
-                wk.setDate(wk.getDate() - wk.getDay());
-                const key = wk.toISOString().slice(0, 10);
-                if (weekStart !== key) {
-                    if (weekData.length > 0) {
-                        const last = weekData[weekData.length - 1];
-                        weekly.push({ date: new Date(weekStart + 'T00:00:00Z'), price: last.price, weekKey: weekStart });
+        // ─── COMPUTE YoY RETURNS (daily) ───
+        // For each date, find price ~365 days ago, compute (P_now / P_365d_ago - 1)
+        function computeYoY(data) {
+            const result = [];
+            for (let i = 0; i < data.length; i++) {
+                const targetDate = new Date(data[i].date);
+                targetDate.setDate(targetDate.getDate() - YOY_PERIOD);
+
+                // Find closest price at least 365 days ago
+                let found = null;
+                for (let j = i - 1; j >= 0; j--) {
+                    if (data[j].date <= targetDate) {
+                        found = data[j];
+                        break;
                     }
-                    weekStart = key;
-                    weekData = [d];
-                } else {
-                    weekData.push(d);
                 }
-            });
-            if (weekData.length > 0) {
-                const last = weekData[weekData.length - 1];
-                weekly.push({ date: new Date(weekStart + 'T00:00:00Z'), price: last.price, weekKey: weekStart });
+                // Also check if next one is closer
+                if (found) {
+                    const dayDiff = (data[i].date - found.date) / (1000 * 60 * 60 * 24);
+                    if (dayDiff > 400) continue; // too far away
+                    const yoy = (data[i].price / found.price - 1) * 100;
+                    result.push({ date: data[i].date, yoy, price: data[i].price });
+                }
             }
-            return weekly;
+            return result;
         }
 
-        // ─── ALIGN WEEKLY PRICES BY WEEK KEY ───
-        function alignWeeklyPrices(gld, btc) {
+        // ─── RESAMPLE TO MONTHLY ───
+        function toMonthly(yoyData) {
+            const monthly = {};
+            yoyData.forEach(d => {
+                const key = d.date.getFullYear() + '-' + String(d.date.getMonth() + 1).padStart(2, '0');
+                monthly[key] = d; // last entry of the month wins
+            });
+            return Object.values(monthly).sort((a, b) => a.date - b.date);
+        }
+
+        // ─── ALIGN MONTHLY DATA ───
+        function alignMonthly(goldMonthly, btcMonthly) {
             const btcMap = {};
-            btc.forEach(d => { btcMap[d.weekKey] = d; });
-            const dates = [], gldPrices = [], btcPrices = [];
-            gld.forEach(d => {
-                if (btcMap[d.weekKey]) {
+            btcMonthly.forEach(d => {
+                const key = d.date.getFullYear() + '-' + String(d.date.getMonth() + 1).padStart(2, '0');
+                btcMap[key] = d;
+            });
+
+            const dates = [], goldYoY = [], btcYoY = [];
+            goldMonthly.forEach(d => {
+                const key = d.date.getFullYear() + '-' + String(d.date.getMonth() + 1).padStart(2, '0');
+                if (btcMap[key]) {
                     dates.push(d.date);
-                    gldPrices.push(d.price);
-                    btcPrices.push(btcMap[d.weekKey].price);
+                    goldYoY.push(d.yoy);
+                    btcYoY.push(btcMap[key].yoy);
                 }
             });
-            return { dates, gldPrices, btcPrices };
+            return { dates, goldYoY, btcYoY };
         }
 
-        // ─── CROSS-CORRELATION ───
-        function crossCorrelation(series1, series2, maxLag) {
-            const n = series1.length;
-            const mean1 = series1.reduce((a, b) => a + b, 0) / n;
-            const mean2 = series2.reduce((a, b) => a + b, 0) / n;
-            const std1 = Math.sqrt(series1.reduce((a, b) => a + (b - mean1) ** 2, 0) / n);
-            const std2 = Math.sqrt(series2.reduce((a, b) => a + (b - mean2) ** 2, 0) / n);
+        // ─── PEARSON CORRELATION ───
+        function pearson(x, y) {
+            const n = x.length;
+            if (n < 5) return 0;
+            const mx = x.reduce((a, b) => a + b, 0) / n;
+            const my = y.reduce((a, b) => a + b, 0) / n;
+            let num = 0, dx = 0, dy = 0;
+            for (let i = 0; i < n; i++) {
+                const xi = x[i] - mx, yi = y[i] - my;
+                num += xi * yi;
+                dx += xi * xi;
+                dy += yi * yi;
+            }
+            const denom = Math.sqrt(dx * dy);
+            return denom > 0 ? num / denom : 0;
+        }
+
+        // ─── COMPUTE CORRELATION AT DIFFERENT LAGS ───
+        // Positive lag = Gold leads (Gold YoY at time t predicts BTC YoY at time t+lag)
+        function computeLagCorrelations(goldYoY, btcYoY, minLag, maxLag) {
             const results = [];
-            for (let lag = -maxLag; lag <= maxLag; lag++) {
-                let sum = 0, count = 0;
-                for (let i = 0; i < n; i++) {
+            for (let lag = minLag; lag <= maxLag; lag++) {
+                const gArr = [], bArr = [];
+                for (let i = 0; i < goldYoY.length; i++) {
                     const j = i + lag;
-                    if (j >= 0 && j < n) {
-                        sum += (series1[i] - mean1) * (series2[j] - mean2);
-                        count++;
+                    if (j >= 0 && j < btcYoY.length) {
+                        gArr.push(goldYoY[i]);
+                        bArr.push(btcYoY[j]);
                     }
                 }
-                results.push({ lag, corr: count > 10 ? sum / (count * std1 * std2) : 0 });
+                results.push({ lag, corr: pearson(gArr, bArr), n: gArr.length });
             }
             return results;
         }
 
         // ─── ROLLING OPTIMAL LAG ───
-        function rollingOptimalLag(s1, s2, dates, windowSize, maxLag) {
+        function computeRollingOptimal(goldYoY, btcYoY, dates, windowMonths, minLag, maxLag) {
             const results = [];
-            for (let i = windowSize; i < s1.length; i++) {
-                const slice1 = s1.slice(i - windowSize, i);
-                const slice2 = s2.slice(i - windowSize, i);
-                const cc = crossCorrelation(slice1, slice2, Math.min(maxLag, Math.floor(windowSize / 3)));
-                // Find best absolute correlation at positive lag (ratio leads)
-                const posLags = cc.filter(c => c.lag >= 0);
-                let best = posLags[0];
-                posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
-                results.push({ date: dates[i], optimalLag: best.lag, corr: best.corr });
+            for (let i = windowMonths; i < goldYoY.length; i++) {
+                const gSlice = goldYoY.slice(i - windowMonths, i);
+                const bSlice = btcYoY.slice(i - windowMonths, i);
+
+                let bestLag = 0, bestCorr = -2;
+                for (let lag = Math.max(minLag, -Math.floor(windowMonths / 3)); lag <= Math.min(maxLag, Math.floor(windowMonths / 3)); lag++) {
+                    const gArr = [], bArr = [];
+                    for (let k = 0; k < gSlice.length; k++) {
+                        const j = k + lag;
+                        if (j >= 0 && j < bSlice.length) {
+                            gArr.push(gSlice[k]);
+                            bArr.push(bSlice[j]);
+                        }
+                    }
+                    const r = pearson(gArr, bArr);
+                    if (r > bestCorr) {
+                        bestCorr = r;
+                        bestLag = lag;
+                    }
+                }
+                results.push({ date: dates[i], lag: bestLag, corr: bestCorr });
             }
             return results;
         }
 
-        // ─── ROLLING Z-SCORE ───
-        function rollingZScore(arr, window) {
-            const result = [];
-            for (let i = 0; i < arr.length; i++) {
-                if (i < window) { result.push(null); continue; }
-                const slice = arr.slice(i - window, i);
-                const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-                const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / slice.length);
-                result.push(std > 0.001 ? (arr[i] - mean) / std : 0);
-            }
-            return result;
-        }
-
-        // ─── WATERMARK PLUGIN ───
+        // ─── WATERMARK ───
         const watermarkPlugin = {
             id: 'watermark',
             afterDraw(chart) {
@@ -689,7 +848,7 @@
                 const w = area.right - area.left;
                 const fontSize = Math.max(16, Math.min(42, w * 0.07));
                 ctx.save();
-                ctx.globalAlpha = 0.07;
+                ctx.globalAlpha = 0.06;
                 ctx.font = `700 ${fontSize}px JetBrains Mono`;
                 ctx.fillStyle = '#ffffff';
                 ctx.textAlign = 'center';
@@ -700,134 +859,187 @@
         };
 
         // ─── GLOBAL STATE ───
-        let corrChart, overlayChart, rollingChart;
-        let ratioChanges, btcReturns, alignedDates;
-        let ratioPrices, btcPricesAligned, gldPricesAligned;
-        let currentOptimalLag = 12;
-        let corrPeriodData = {};
+        let mainChart, corrChart, rollingChart;
+        let allDates, allGoldYoY, allBtcYoY;
+        let allLagCorrelations;
+        let optimalLag = 0;
+        let currentLag = 0;
+        let currentPeriod = 'all';
 
-        // ─── MAIN ───
-        async function init() {
-            const [btcRaw, gldRaw] = await Promise.all([
-                loadCSV('BTC_USD.csv'),
-                loadCSV('GLD.csv')
-            ]);
-
-            if (btcRaw.length === 0 || gldRaw.length === 0) {
-                document.getElementById('loading').innerHTML = '⚠️ 데이터를 불러올 수 없습니다';
-                return;
-            }
-
-            const btcWeekly = toWeekly(btcRaw);
-            const gldWeekly = toWeekly(gldRaw);
-
-            // Align weekly prices
-            const aligned = alignWeeklyPrices(gldWeekly, btcWeekly);
-            gldPricesAligned = aligned.gldPrices;
-            btcPricesAligned = aligned.btcPrices;
-
-            // Compute Gold/BTC ratio
-            ratioPrices = gldPricesAligned.map((g, i) => g / btcPricesAligned[i]);
-
-            // Weekly changes: ratio change and BTC return (start from index 1)
-            ratioChanges = [];
-            btcReturns = [];
-            alignedDates = [];
-            for (let i = 1; i < ratioPrices.length; i++) {
-                ratioChanges.push((ratioPrices[i] - ratioPrices[i - 1]) / ratioPrices[i - 1]);
-                btcReturns.push((btcPricesAligned[i] - btcPricesAligned[i - 1]) / btcPricesAligned[i - 1]);
-                alignedDates.push(aligned.dates[i]);
-            }
-
-            // Prepare period subsets
-            const periods = { all: 0, '5y': 260, '3y': 156, '1y': 52 };
-            for (const [key, weeks] of Object.entries(periods)) {
-                const startIdx = weeks === 0 ? 0 : Math.max(0, ratioChanges.length - weeks);
-                corrPeriodData[key] = {
-                    ratio: ratioChanges.slice(startIdx),
-                    btc: btcReturns.slice(startIdx),
-                    dates: alignedDates.slice(startIdx)
-                };
-            }
-
-            // Full cross-correlation: ratio change → BTC return
-            const cc = crossCorrelation(ratioChanges, btcReturns, MAX_LAG);
-
-            // Find best absolute correlation at positive lag
-            const posLags = cc.filter(c => c.lag >= 0);
-            let best = posLags[0];
-            posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
-            currentOptimalLag = best.lag;
-
-            // Update stats
-            document.getElementById('statLag').textContent = best.lag + '주';
-            document.getElementById('statLagSub').textContent = best.corr < 0
-                ? `비율↑ → ${best.lag}주 후 BTC↑ (역상관)`
-                : `비율↑ → ${best.lag}주 후 BTC 동조`;
-
-            const corrEl = document.getElementById('statCorr');
-            corrEl.textContent = best.corr.toFixed(3);
-            const absCor = Math.abs(best.corr);
-            corrEl.className = 'stat-value ' + (absCor >= 0.3 ? 'positive' : absCor >= 0.1 ? 'neutral' : 'negative');
-            document.getElementById('statCorrSub').textContent =
-                absCor >= 0.5 ? '강한 상관' : absCor >= 0.3 ? '유의미한 상관' : absCor >= 0.1 ? '약한 상관' : '무상관';
-
-            // Gold/BTC ratio 52w Z-Score
-            const ratioZ52 = rollingZScore(ratioPrices.slice(1), 52);
-            const currentRatioZ = ratioZ52[ratioZ52.length - 1];
-            if (currentRatioZ !== null) {
-                const zEl = document.getElementById('statGoldChg');
-                zEl.textContent = (currentRatioZ >= 0 ? '+' : '') + currentRatioZ.toFixed(2) + 'σ';
-                zEl.className = 'stat-value ' + (currentRatioZ >= 2 ? 'positive' : currentRatioZ <= -2 ? 'negative' : 'neutral');
-            }
-
-            // BTC signal
-            const signalEl = document.getElementById('statSignal');
-            const signalSubEl = document.getElementById('statSignalSub');
-            if (currentRatioZ !== null && absCor >= 0.1) {
-                if (currentRatioZ >= 1.5) {
-                    signalEl.textContent = 'BTC 저평가';
-                    signalEl.className = 'stat-value positive';
-                    signalSubEl.textContent = `Gold/BTC 비율 +${currentRatioZ.toFixed(1)}σ`;
-                } else if (currentRatioZ <= -1.5) {
-                    signalEl.textContent = 'BTC 고평가';
-                    signalEl.className = 'stat-value negative';
-                    signalSubEl.textContent = `Gold/BTC 비율 ${currentRatioZ.toFixed(1)}σ`;
-                } else {
-                    signalEl.textContent = '중립';
-                    signalEl.className = 'stat-value neutral';
-                    signalSubEl.textContent = '뚜렷한 방향성 없음';
+        // ─── GET SHIFTED DATA FOR MAIN CHART ───
+        function getShiftedData(lag) {
+            const goldData = [], btcData = [];
+            for (let i = 0; i < allGoldYoY.length; i++) {
+                const j = i + lag;
+                if (j >= 0 && j < allBtcYoY.length) {
+                    // When lag > 0: gold from time i is compared with btc from time i+lag
+                    // On chart: we plot gold[i] at the date of btc[j] = dates[j]
+                    btcData.push({ x: allDates[j].getTime(), y: allBtcYoY[j] });
+                    goldData.push({ x: allDates[j].getTime(), y: allGoldYoY[i] });
                 }
-            } else {
-                signalEl.textContent = '중립';
-                signalEl.className = 'stat-value neutral';
-                signalSubEl.textContent = '뚜렷한 방향성 없음';
             }
-
-            // ─── BUILD CHARTS ───
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('corrChart').style.display = 'block';
-
-            buildCorrChart(cc, best.lag);
-            buildOverlayChart(currentOptimalLag);
-            buildRollingChart();
-
-            document.getElementById('lagSlider').value = currentOptimalLag;
-            document.getElementById('lagDisplay').textContent = currentOptimalLag + '주';
-            document.getElementById('optimalBtn').textContent = `최적값 (${currentOptimalLag}주)`;
+            return { goldData, btcData };
         }
 
-        // ─── CHART 1: Cross-Correlation ───
-        function buildCorrChart(cc, optimalLag) {
+        function getCorrelationAtLag(lag) {
+            const found = allLagCorrelations.find(c => c.lag === lag);
+            return found ? found.corr : 0;
+        }
+
+        // ─── BUILD MAIN CHART ───
+        function buildMainChart(lag) {
+            const { goldData, btcData } = getShiftedData(lag);
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (mainChart) mainChart.destroy();
+
+            mainChart = new Chart(ctx, {
+                type: 'line',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: 'BTC YoY (%)',
+                            data: btcData,
+                            borderColor: 'rgba(247, 147, 26, 0.9)',
+                            backgroundColor: 'rgba(247, 147, 26, 0.06)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            yAxisID: 'yBtc'
+                        },
+                        {
+                            label: 'Gold YoY (%)',
+                            data: goldData,
+                            borderColor: 'rgba(212, 168, 67, 0.9)',
+                            backgroundColor: 'rgba(212, 168, 67, 0.06)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false,
+                            yAxisID: 'yGold'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                zeroLine: {
+                                    type: 'line',
+                                    yMin: 0, yMax: 0,
+                                    yScaleID: 'yGold',
+                                    borderColor: 'rgba(255,255,255,0.15)',
+                                    borderWidth: 1,
+                                    borderDash: [4, 4]
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#ccc',
+                            borderColor: '#333',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                title: items => {
+                                    if (!items.length) return '';
+                                    return new Date(items[0].parsed.x).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short' });
+                                },
+                                label: ctx => {
+                                    const sign = ctx.parsed.y >= 0 ? '+' : '';
+                                    if (ctx.datasetIndex === 0)
+                                        return ` BTC YoY: ${sign}${ctx.parsed.y.toFixed(1)}%`;
+                                    return ` Gold YoY: ${sign}${ctx.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'year', displayFormats: { year: 'yyyy' } },
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#666',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                maxTicksLimit: 12
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yBtc: {
+                            type: 'linear',
+                            position: 'left',
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: 'rgba(247, 147, 26, 0.7)',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v + '%'
+                            },
+                            title: {
+                                display: true,
+                                text: 'BTC YoY (%)',
+                                color: 'rgba(247, 147, 26, 0.7)',
+                                font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        yGold: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: {
+                                color: 'rgba(212, 168, 67, 0.7)',
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => v + '%'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Gold YoY (%)',
+                                color: 'rgba(212, 168, 67, 0.7)',
+                                font: { family: 'JetBrains Mono', size: 10 }
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ─── BUILD CORRELATION BAR CHART ───
+        function buildCorrChart(lagCorrs, period) {
             const ctx = document.getElementById('corrChart').getContext('2d');
             if (corrChart) corrChart.destroy();
 
-            const labels = cc.map(c => c.lag);
-            const values = cc.map(c => c.corr);
-            const colors = cc.map(c => {
-                if (c.lag === optimalLag) return 'rgba(212, 168, 67, 1)';
-                if (c.corr < 0) return c.lag > 0 ? 'rgba(0, 212, 170, 0.6)' : 'rgba(255, 71, 87, 0.4)';
-                return c.lag > 0 ? 'rgba(77, 171, 247, 0.5)' : 'rgba(255, 71, 87, 0.3)';
+            let data = lagCorrs;
+            if (period !== 'all') {
+                const months = period === '5y' ? 60 : 36;
+                const startIdx = Math.max(0, allGoldYoY.length - months);
+                const gSlice = allGoldYoY.slice(startIdx);
+                const bSlice = allBtcYoY.slice(startIdx);
+                data = computeLagCorrelations(gSlice, bSlice, MIN_LAG, MAX_LAG);
+            }
+
+            const bestPositive = data.filter(d => d.lag >= 0).reduce((best, d) =>
+                d.corr > best.corr ? d : best, { lag: 0, corr: -2 });
+
+            const labels = data.map(d => d.lag);
+            const values = data.map(d => d.corr);
+            const colors = data.map(d => {
+                if (d.lag === bestPositive.lag && d.lag >= 0)
+                    return 'rgba(212, 168, 67, 1)';
+                if (d.lag === currentLag)
+                    return 'rgba(255, 255, 255, 0.7)';
+                if (d.corr >= 0)
+                    return d.lag >= 0 ? 'rgba(0, 212, 170, 0.5)' : 'rgba(77, 171, 247, 0.3)';
+                return d.lag >= 0 ? 'rgba(255, 71, 87, 0.4)' : 'rgba(255, 71, 87, 0.25)';
             });
 
             corrChart = new Chart(ctx, {
@@ -848,56 +1060,39 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
+                        annotation: {
+                            annotations: {
+                                zeroLag: {
+                                    type: 'line',
+                                    xMin: MAX_LAG - MIN_LAG > 0 ? -MIN_LAG : 12,
+                                    xMax: MAX_LAG - MIN_LAG > 0 ? -MIN_LAG : 12,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    borderWidth: 1,
+                                    borderDash: [4, 3],
+                                    label: {
+                                        content: '동시',
+                                        display: true,
+                                        position: 'start',
+                                        color: '#666',
+                                        font: { family: 'JetBrains Mono', size: 9 },
+                                        backgroundColor: 'transparent'
+                                    }
+                                }
+                            }
+                        },
                         tooltip: {
                             backgroundColor: 'rgba(10,10,10,0.95)',
                             titleColor: '#fff', bodyColor: '#ccc',
                             borderColor: '#333', borderWidth: 1, padding: 12,
                             callbacks: {
                                 title: items => {
+                                    if (!items.length) return '';
                                     const lag = items[0].label;
-                                    const dir = lag > 0 ? '비율 변화 선행' : lag < 0 ? 'BTC 선행' : '동시';
-                                    return `Lag: ${lag}주 (${dir})`;
+                                    if (lag > 0) return `Gold ${lag}개월 선행`;
+                                    if (lag < 0) return `Gold ${Math.abs(lag)}개월 후행`;
+                                    return '동시 (Lag 0)';
                                 },
-                                label: ctx => {
-                                    const v = ctx.parsed.y;
-                                    const sign = v >= 0 ? '+' : '';
-                                    const meaning = v < -0.05 ? ' · 역상관(비율↑→BTC↑)' : v > 0.05 ? ' · 동조(비율↑→BTC↓)' : '';
-                                    return `상관계수: ${sign}${v.toFixed(4)}${meaning}`;
-                                }
-                            }
-                        },
-                        annotation: {
-                            annotations: {
-                                optLine: {
-                                    type: 'line',
-                                    xMin: optimalLag + MAX_LAG, xMax: optimalLag + MAX_LAG,
-                                    borderColor: 'rgba(212, 168, 67, 0.7)',
-                                    borderWidth: 2,
-                                    borderDash: [6, 3],
-                                    label: {
-                                        display: true,
-                                        content: `최적: ${optimalLag}주`,
-                                        position: 'start',
-                                        backgroundColor: 'rgba(212, 168, 67, 0.15)',
-                                        color: 'rgba(212, 168, 67, 0.9)',
-                                        font: { family: 'JetBrains Mono', size: 10, weight: '600' },
-                                        padding: { left: 6, right: 6, top: 3, bottom: 3 },
-                                        borderRadius: 4
-                                    }
-                                },
-                                zeroLag: {
-                                    type: 'line',
-                                    xMin: MAX_LAG, xMax: MAX_LAG,
-                                    borderColor: 'rgba(255,255,255,0.15)',
-                                    borderWidth: 1,
-                                    borderDash: [4, 4]
-                                },
-                                zeroCorr: {
-                                    type: 'line',
-                                    yMin: 0, yMax: 0,
-                                    borderColor: 'rgba(255,255,255,0.1)',
-                                    borderWidth: 1
-                                }
+                                label: ctx => ` 상관계수: ${ctx.parsed.y.toFixed(3)}`
                             }
                         }
                     },
@@ -908,181 +1103,54 @@
                                 color: '#666',
                                 font: { family: 'JetBrains Mono', size: 10 },
                                 callback: function(val, idx) {
-                                    const lag = idx - MAX_LAG;
-                                    if (lag % 10 === 0) return lag + 'w';
+                                    const v = this.getLabelForValue(val);
+                                    if (v % 3 === 0) return v + 'M';
                                     return '';
-                                },
-                                maxRotation: 0
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: '← Gold 후행 | Gold 선행 →',
+                                color: '#555',
+                                font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
                         },
                         y: {
                             grid: { color: 'rgba(255,255,255,0.04)' },
                             ticks: {
-                                color: '#888',
+                                color: '#666',
                                 font: { family: 'JetBrains Mono', size: 10 },
                                 callback: v => v.toFixed(2)
                             },
                             title: {
-                                display: true, text: '상관계수',
-                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
+                                display: true,
+                                text: '상관계수 (r)',
+                                color: '#666',
+                                font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function switchCorrPeriod(period) {
-            document.querySelectorAll('#corrTabs .tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`#corrTabs .tab-btn[data-period="${period}"]`).classList.add('active');
-            const d = corrPeriodData[period];
-            const cc = crossCorrelation(d.ratio, d.btc, MAX_LAG);
-            const posLags = cc.filter(c => c.lag >= 0);
-            let best = posLags[0];
-            posLags.forEach(c => { if (Math.abs(c.corr) > Math.abs(best.corr)) best = c; });
-            buildCorrChart(cc, best.lag);
-        }
-
-        // ─── CHART 2: Overlay (Rolling Z-Score: Ratio inverted vs BTC price) ───
-        function buildOverlayChart(lag) {
-            const ctx = document.getElementById('overlayChart').getContext('2d');
-            if (overlayChart) overlayChart.destroy();
-
-            const zWindow = 104; // 2yr lookback
-
-            // Gold/BTC ratio Z-Score (inverted: multiply by -1)
-            // High ratio = BTC cheap → inverted to low → matches BTC low price
-            const ratioZ = rollingZScore(ratioPrices.slice(1), zWindow);
-            const ratioZInv = ratioZ.map(v => v !== null ? -v : null);
-
-            // BTC price rolling Z-Score
-            const btcPriceZ = rollingZScore(btcPricesAligned.slice(1), zWindow);
-
-            // Build data arrays
-            const btcData = [];
-            const goldData = [];
-            for (let i = 0; i < btcPriceZ.length; i++) {
-                if (btcPriceZ[i] !== null) {
-                    btcData.push({ x: alignedDates[i].getTime(), y: btcPriceZ[i] });
-                }
-            }
-            for (let i = 0; i < ratioZInv.length; i++) {
-                if (ratioZInv[i] === null) continue;
-                const shiftedIdx = i + lag;
-                if (shiftedIdx < alignedDates.length) {
-                    goldData.push({ x: alignedDates[shiftedIdx].getTime(), y: ratioZInv[i] });
-                }
-            }
-
-            // Correlation at this lag from raw cross-corr
-            let corrAtLag = 0;
-            const cc = crossCorrelation(ratioChanges, btcReturns, MAX_LAG);
-            const found = cc.find(c => c.lag === lag);
-            if (found) corrAtLag = found.corr;
-
-            document.getElementById('overlaySubtitle').textContent =
-                `Gold/BTC 비율 Z-Score (반전) vs BTC 가격 Z-Score · ${lag}주 시프트 · 상관: ${corrAtLag.toFixed(3)}`;
-
-            overlayChart = new Chart(ctx, {
-                type: 'line',
-                plugins: [watermarkPlugin],
-                data: {
-                    datasets: [
-                        {
-                            label: 'BTC 가격 Z-Score',
-                            data: btcData,
-                            borderColor: '#f7931a',
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            tension: 0.2,
-                            fill: false
-                        },
-                        {
-                            label: `Gold/BTC 비율 Z-Score 반전 (${lag}주 시프트)`,
-                            data: goldData,
-                            borderColor: '#d4a843',
-                            borderWidth: 1.5,
-                            pointRadius: 0,
-                            tension: 0.2,
-                            fill: false,
-                            borderDash: [4, 2]
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(10,10,10,0.95)',
-                            titleColor: '#fff', bodyColor: '#ccc',
-                            borderColor: '#333', borderWidth: 1, padding: 12,
-                            callbacks: {
-                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
-                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}σ`
-                            }
-                        },
-                        annotation: {
-                            annotations: {
-                                zeroLine: {
-                                    type: 'line',
-                                    yMin: 0, yMax: 0,
-                                    borderColor: 'rgba(255,255,255,0.15)',
-                                    borderWidth: 1,
-                                    borderDash: [4, 4]
-                                }
-                            }
                         }
                     },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: { unit: 'year', displayFormats: { year: 'yyyy' } },
-                            grid: { color: 'rgba(255,255,255,0.04)' },
-                            ticks: { color: '#666', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 12 },
-                            border: { color: 'rgba(255,255,255,0.1)' }
-                        },
-                        y: {
-                            grid: { color: 'rgba(255,255,255,0.04)' },
-                            ticks: {
-                                color: '#888',
-                                font: { family: 'JetBrains Mono', size: 10 },
-                                callback: v => (v >= 0 ? '+' : '') + v.toFixed(1) + 'σ'
-                            },
-                            title: {
-                                display: true, text: 'Z-Score (104주 롤링)',
-                                color: '#666', font: { family: 'JetBrains Mono', size: 10 }
-                            },
-                            border: { color: 'rgba(255,255,255,0.1)' }
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            const lag = data[idx].lag;
+                            document.getElementById('lagSlider').value = lag;
+                            updateLag(lag);
                         }
                     }
                 }
             });
         }
 
-        function updateOverlay(val) {
-            const lag = parseInt(val);
-            document.getElementById('lagDisplay').textContent = lag + '주';
-            buildOverlayChart(lag);
-        }
-
-        function setOptimalLag() {
-            document.getElementById('lagSlider').value = currentOptimalLag;
-            document.getElementById('lagDisplay').textContent = currentOptimalLag + '주';
-            buildOverlayChart(currentOptimalLag);
-        }
-
-        // ─── CHART 3: Rolling Optimal Lag ───
-        function buildRollingChart() {
+        // ─── BUILD ROLLING CHART ───
+        function buildRollingChart(rollingData) {
             const ctx = document.getElementById('rollingChart').getContext('2d');
-            const rolling = rollingOptimalLag(ratioChanges, btcReturns, alignedDates, 104, 26);
+            if (rollingChart) rollingChart.destroy();
 
-            const lagData = rolling.map(d => ({ x: d.date.getTime(), y: d.optimalLag }));
-            const corrData = rolling.map(d => ({ x: d.date.getTime(), y: d.corr }));
+            const lagData = rollingData.map(d => ({ x: d.date.getTime(), y: d.lag }));
+            const corrData = rollingData.map(d => ({ x: d.date.getTime(), y: d.corr }));
 
             rollingChart = new Chart(ctx, {
                 type: 'line',
@@ -1090,7 +1158,7 @@
                 data: {
                     datasets: [
                         {
-                            label: '최적 Lag (주)',
+                            label: '최적 Lag (월)',
                             data: lagData,
                             borderColor: '#d4a843',
                             backgroundColor: 'rgba(212, 168, 67, 0.08)',
@@ -1124,9 +1192,11 @@
                             titleColor: '#fff', bodyColor: '#ccc',
                             borderColor: '#333', borderWidth: 1, padding: 12,
                             callbacks: {
-                                title: items => items.length ? new Date(items[0].parsed.x).toISOString().slice(0, 10) : '',
+                                title: items => items.length ?
+                                    new Date(items[0].parsed.x).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short' }) : '',
                                 label: ctx => {
-                                    if (ctx.datasetIndex === 0) return ` 최적 Lag: ${ctx.parsed.y}주`;
+                                    if (ctx.datasetIndex === 0)
+                                        return ` 최적 Lag: ${ctx.parsed.y}개월 (Gold 선행)`;
                                     return ` 상관계수: ${ctx.parsed.y.toFixed(3)}`;
                                 }
                             }
@@ -1143,15 +1213,14 @@
                         yLag: {
                             type: 'linear',
                             position: 'left',
-                            min: 0, max: 30,
                             grid: { color: 'rgba(255,255,255,0.04)' },
                             ticks: {
                                 color: '#d4a843',
                                 font: { family: 'JetBrains Mono', size: 10 },
-                                callback: v => v + 'w'
+                                callback: v => v + 'M'
                             },
                             title: {
-                                display: true, text: '최적 Lag (주)',
+                                display: true, text: '최적 Lag (월)',
                                 color: '#d4a843', font: { family: 'JetBrains Mono', size: 10 }
                             },
                             border: { color: 'rgba(255,255,255,0.1)' }
@@ -1159,7 +1228,7 @@
                         yCorr: {
                             type: 'linear',
                             position: 'right',
-                            min: -0.6, max: 0.6,
+                            min: -0.5, max: 1,
                             grid: { display: false },
                             ticks: {
                                 color: 'rgba(0,212,170,0.6)',
@@ -1177,98 +1246,272 @@
             });
         }
 
+        // ─── CORRELATION HEATMAP BAR ───
+        function buildCorrBar(lagCorrs) {
+            const container = document.getElementById('corrBar');
+            container.innerHTML = '';
 
-        // ─── SHARE (3-fallback for iframe) ───
+            const maxAbsCorr = Math.max(...lagCorrs.map(d => Math.abs(d.corr)));
+
+            lagCorrs.forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'corr-bar-item' + (d.lag === currentLag ? ' active' : '');
+
+                // Color: green for positive corr, red for negative
+                const intensity = Math.abs(d.corr) / Math.max(maxAbsCorr, 0.01);
+                if (d.corr >= 0) {
+                    el.style.background = `rgba(0, 212, 170, ${0.15 + intensity * 0.7})`;
+                } else {
+                    el.style.background = `rgba(255, 71, 87, ${0.15 + intensity * 0.7})`;
+                }
+
+                el.dataset.lag = d.lag;
+                el.dataset.corr = d.corr.toFixed(3);
+
+                el.addEventListener('click', () => {
+                    document.getElementById('lagSlider').value = d.lag;
+                    updateLag(d.lag);
+                });
+
+                el.addEventListener('mouseenter', (e) => {
+                    const tooltip = document.getElementById('corrTooltip');
+                    let label = d.lag > 0 ? `Gold ${d.lag}M 선행` :
+                                d.lag < 0 ? `Gold ${Math.abs(d.lag)}M 후행` : '동시';
+                    tooltip.textContent = `${label} · r = ${d.corr.toFixed(3)}`;
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY - 30 + 'px';
+                });
+
+                el.addEventListener('mousemove', (e) => {
+                    const tooltip = document.getElementById('corrTooltip');
+                    tooltip.style.left = e.clientX + 10 + 'px';
+                    tooltip.style.top = e.clientY - 30 + 'px';
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    document.getElementById('corrTooltip').style.display = 'none';
+                });
+
+                container.appendChild(el);
+            });
+        }
+
+        // ─── UPDATE LAG ───
+        function updateLag(val) {
+            const lag = parseInt(val);
+            currentLag = lag;
+
+            // Update display
+            let label;
+            if (lag > 0) label = `+${lag}개월 (Gold 선행)`;
+            else if (lag < 0) label = `${lag}개월 (Gold 후행)`;
+            else label = '0개월 (동시)';
+            document.getElementById('lagDisplay').textContent = label;
+
+            // Update correlation display
+            const corr = getCorrelationAtLag(lag);
+            const corrEl = document.getElementById('lagCorr');
+            const corrVal = corrEl.querySelector('.val');
+            corrVal.textContent = corr.toFixed(3);
+            corrVal.style.color = corr >= 0.3 ? '#00d4aa' : corr >= 0 ? '#ffd43b' : '#ff4757';
+
+            // Update main chart
+            buildMainChart(lag);
+
+            // Update corr bar active state
+            document.querySelectorAll('.corr-bar-item').forEach(el => {
+                el.classList.toggle('active', parseInt(el.dataset.lag) === lag);
+            });
+
+            // Update interpretation
+            updateInterpretation(lag, corr);
+
+            // Update corr chart highlight (rebuild)
+            buildCorrChart(allLagCorrelations, currentPeriod);
+        }
+
+        function setOptimalLag() {
+            document.getElementById('lagSlider').value = optimalLag;
+            updateLag(optimalLag);
+        }
+
+        function resetLag() {
+            document.getElementById('lagSlider').value = 0;
+            updateLag(0);
+        }
+
+        function switchPeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('#corrTabs .tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.period === period);
+            });
+            buildCorrChart(allLagCorrelations, period);
+        }
+
+        // ─── INTERPRETATION TEXT ───
+        function updateInterpretation(lag, corr) {
+            const el = document.getElementById('interpretation');
+            const absCorr = Math.abs(corr);
+            let strength = absCorr >= 0.6 ? '매우 강한' : absCorr >= 0.4 ? '강한' : absCorr >= 0.2 ? '보통의' : '약한';
+
+            let html = '';
+            if (lag > 0) {
+                html = `현재 설정: <span class="gold-tag">Gold YoY</span>가 <span class="highlight">${lag}개월 선행</span>한다고 가정 · `;
+                html += `상관계수 r = <span class="highlight">${corr.toFixed(3)}</span> (${strength} 양의 상관) · `;
+                if (corr >= 0.3) {
+                    html += `이는 <span class="gold-tag">금의 YoY 상승</span>이 약 ${lag}개월 후 <span class="btc-tag">비트코인의 YoY 상승</span>으로 이어지는 패턴이 관찰됨을 의미합니다.`;
+                } else {
+                    html += `이 시차에서는 뚜렷한 선행 관계가 관찰되지 않습니다.`;
+                }
+            } else if (lag < 0) {
+                html = `현재 설정: <span class="btc-tag">BTC YoY</span>가 <span class="highlight">${Math.abs(lag)}개월 선행</span>한다고 가정 · `;
+                html += `상관계수 r = <span class="highlight">${corr.toFixed(3)}</span> · `;
+                html += `비트코인이 금보다 먼저 움직이는 패턴을 확인하는 설정입니다.`;
+            } else {
+                html = `현재 설정: <span class="highlight">동시 비교</span> (시차 없음) · `;
+                html += `상관계수 r = <span class="highlight">${corr.toFixed(3)}</span> · `;
+                html += `금과 비트코인의 YoY가 같은 시점에서 얼마나 같이 움직이는지를 보여줍니다.`;
+            }
+
+            el.innerHTML = html;
+        }
+
+        // ─── SHARE ───
         function openUrl(url) {
             try {
                 const a = document.createElement('a');
-                a.href = url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } catch(e) {
-                window.open(url, '_blank');
-            }
+                a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            } catch(e) { window.open(url, '_blank'); }
         }
 
         function doCopy(text) {
             try { window.parent.postMessage({ type: 'clipboard', text }, '*'); } catch(e) {}
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(() => {}).catch(() => {
-                    fallbackCopy(text);
-                });
-            } else {
-                fallbackCopy(text);
-            }
+                navigator.clipboard.writeText(text).then(() => {}).catch(() => fallbackCopy(text));
+            } else { fallbackCopy(text); }
         }
 
         function fallbackCopy(text) {
             try {
                 const ta = document.createElement('textarea');
-                ta.value = text;
-                ta.style.cssText = 'position:fixed;opacity:0';
-                document.body.appendChild(ta);
-                ta.focus();
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-            } catch(e) {
-                window.prompt('아래 링크를 복사하세요:', text);
-            }
+                ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+            } catch(e) { window.prompt('아래 링크를 복사하세요:', text); }
         }
 
         function showToast(msg) {
             const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.classList.add('show');
+            t.textContent = msg; t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2500);
         }
 
         function doShare(type) {
-            const title = '금-비트코인 선행성 분석 | HerdVibe';
-            const text = 'Gold/BTC 비율 변화가 비트코인을 얼마나 먼저 예고하는가?';
+            const title = 'Gold vs Bitcoin YoY 선행성 분석 | HerdVibe';
+            const text = '금과 비트코인의 YoY 수익률 비교로 선행/후행 관계를 분석합니다';
             const url = SHARE_URL;
 
             switch(type) {
                 case 'twitter':
-                    openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
-                    break;
+                    openUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`); break;
                 case 'telegram':
-                    openUrl(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
-                    break;
+                    openUrl(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`); break;
                 case 'kakao':
                     try {
                         if (window.Kakao && Kakao.isInitialized()) {
                             Kakao.Share.sendDefault({
                                 objectType: 'feed',
-                                content: {
-                                    title: title,
-                                    description: text,
-                                    imageUrl: '',
-                                    link: { mobileWebUrl: url, webUrl: url }
-                                }
+                                content: { title, description: text, imageUrl: '', link: { mobileWebUrl: url, webUrl: url } }
                             });
-                        } else {
-                            openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`);
-                        }
-                    } catch(e) {
-                        openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`);
-                    }
+                        } else { openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`); }
+                    } catch(e) { openUrl(`https://story.kakao.com/share?url=${encodeURIComponent(url)}`); }
                     break;
                 case 'instagram':
-                    doCopy(url);
-                    showToast('링크가 복사되었습니다 — 인스타그램 스토리에 붙여넣기 하세요');
-                    break;
+                    doCopy(url); showToast('링크가 복사되었습니다 — 인스타그램 스토리에 붙여넣기 하세요'); break;
                 case 'copy':
-                    doCopy(url);
-                    showToast('링크가 복사되었습니다');
-                    break;
+                    doCopy(url); showToast('링크가 복사되었습니다'); break;
             }
         }
 
         // ─── INIT ───
+        async function init() {
+            const [btcRaw, gldRaw] = await Promise.all([
+                loadCSV('BTC_USD.csv'),
+                loadCSV('GLD.csv')
+            ]);
+
+            if (btcRaw.length === 0 || gldRaw.length === 0) {
+                document.getElementById('loading').innerHTML = '⚠️ 데이터를 불러올 수 없습니다';
+                return;
+            }
+
+            // Compute YoY
+            const btcYoYRaw = computeYoY(btcRaw);
+            const gldYoYRaw = computeYoY(gldRaw);
+
+            // Convert to monthly
+            const btcMonthly = toMonthly(btcYoYRaw);
+            const gldMonthly = toMonthly(gldYoYRaw);
+
+            // Align
+            const aligned = alignMonthly(gldMonthly, btcMonthly);
+            allDates = aligned.dates;
+            allGoldYoY = aligned.goldYoY;
+            allBtcYoY = aligned.btcYoY;
+
+            // Compute lag correlations
+            allLagCorrelations = computeLagCorrelations(allGoldYoY, allBtcYoY, MIN_LAG, MAX_LAG);
+
+            // Find optimal lag (positive = gold leads)
+            const positiveCorrs = allLagCorrelations.filter(c => c.lag >= 0);
+            const best = positiveCorrs.reduce((b, d) => d.corr > b.corr ? d : b, { lag: 0, corr: -2 });
+            optimalLag = best.lag;
+
+            // Update stats
+            const lastGoldYoY = allGoldYoY[allGoldYoY.length - 1];
+            const lastBtcYoY = allBtcYoY[allBtcYoY.length - 1];
+
+            const gEl = document.getElementById('statGoldYoY');
+            gEl.textContent = (lastGoldYoY >= 0 ? '+' : '') + lastGoldYoY.toFixed(1) + '%';
+            document.getElementById('statGoldSub').textContent = allDates[allDates.length - 1].toLocaleDateString('ko-KR', { year: 'numeric', month: 'short' });
+
+            const bEl = document.getElementById('statBtcYoY');
+            bEl.textContent = (lastBtcYoY >= 0 ? '+' : '') + lastBtcYoY.toFixed(1) + '%';
+            document.getElementById('statBtcSub').textContent = allDates[allDates.length - 1].toLocaleDateString('ko-KR', { year: 'numeric', month: 'short' });
+
+            const optLagEl = document.getElementById('statOptLag');
+            optLagEl.textContent = best.lag + '개월';
+            optLagEl.className = 'stat-value ' + (best.lag >= 6 ? 'gold' : 'neutral');
+            document.getElementById('statOptLagSub').textContent = best.lag > 0 ? 'Gold 선행' : '동시';
+
+            const optCorrEl = document.getElementById('statOptCorr');
+            optCorrEl.textContent = best.corr.toFixed(3);
+            optCorrEl.className = 'stat-value ' + (best.corr >= 0.4 ? 'positive' : best.corr >= 0.2 ? 'neutral' : 'negative');
+            const absCorr = Math.abs(best.corr);
+            document.getElementById('statOptCorrSub').textContent =
+                absCorr >= 0.6 ? '매우 강한 상관' : absCorr >= 0.4 ? '강한 상관' : absCorr >= 0.2 ? '보통' : '약한 상관';
+
+            document.getElementById('optimalBtn').textContent = `최적값 (${best.lag}M)`;
+
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainChart').style.display = 'block';
+
+            // Build charts
+            buildMainChart(0);
+            buildCorrBar(allLagCorrelations);
+            buildCorrChart(allLagCorrelations, 'all');
+
+            // Rolling optimal
+            const rolling = computeRollingOptimal(allGoldYoY, allBtcYoY, allDates, 36, 0, 18);
+            buildRollingChart(rolling);
+
+            // Initial interpretation
+            updateInterpretation(0, getCorrelationAtLag(0));
+        }
+
         init();
     </script>
 </body>
