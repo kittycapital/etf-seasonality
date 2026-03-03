@@ -55,6 +55,13 @@
         .zoom-reset-btn:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:var(--accent-cyan)}
         .zoom-hint{text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px;font-family:'JetBrains Mono',monospace}
 
+        /* Chart Tabs */
+        .chart-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:8px;padding:3px;align-self:center}
+        .chart-tab{padding:5px 14px;border-radius:6px;border:none;background:transparent;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap}
+        .chart-tab:hover{color:var(--text-secondary)}
+        .chart-tab.active{background:rgba(255,255,255,0.1);color:var(--text-primary);font-weight:600}
+        @media(max-width:480px){.chart-tab{padding:4px 10px;font-size:10px}}
+
         body {
             font-family: 'Noto Sans KR', sans-serif;
             background-color: var(--bg-primary);
@@ -394,7 +401,11 @@
             <div class="chart-header">
                 <div class="chart-title-group">
                     <h2>Bitcoin Price + Power Law Model</h2>
-                    <div class="subtitle" id="chartSubtitle">로그 스케일 · 주간 데이터</div>
+                    <div class="subtitle" id="chartSubtitle">세미로그 스케일 · 주간 데이터</div>
+                </div>
+                <div class="chart-tabs">
+                    <button class="chart-tab active" id="tabSemilog" onclick="switchTab('semilog')">세미로그</button>
+                    <button class="chart-tab" id="tabLoglog" onclick="switchTab('loglog')">Power Law</button>
                 </div>
                 <button class="zoom-reset-btn" id="zoomResetBtn" onclick="resetZoom()">↺ Reset Zoom</button>
                 <div class="legend-row">
@@ -415,6 +426,7 @@
                     데이터 로딩 중...
                 </div>
                 <canvas id="priceChart" style="display:none"></canvas>
+                <canvas id="loglogChart" style="display:none"></canvas>
             </div>
         </div>
 
@@ -916,6 +928,166 @@
             });
 
             // ═══════════════════════════
+            // CHART 1B: Log-Log Power Law
+            // ═══════════════════════════
+            // Transform data to log10 space
+            const llBtcPoints = btcWeekly.filter(d => daysSinceGenesis(d.date) > 1).map(d => ({
+                x: Math.log10(daysSinceGenesis(d.date)),
+                y: Math.log10(d.price)
+            }));
+
+            // Trend & support as straight lines in log-log space
+            const llXmin = Math.log10(daysSinceGenesis(new Date('2009-07-01')));
+            const llXmax = Math.log10(daysSinceGenesis(new Date('2029-12-31')));
+            const llTrendPoints = [
+                { x: llXmin, y: pl.intercept + pl.slope * llXmin },
+                { x: llXmax, y: pl.intercept + pl.slope * llXmax }
+            ];
+            const llSupportPoints = [
+                { x: llXmin, y: (pl.intercept - 1.5 * pl.stdDev) + pl.slope * llXmin },
+                { x: llXmax, y: (pl.intercept - 1.5 * pl.stdDev) + pl.slope * llXmax }
+            ];
+
+            // Generate year tick values for X axis
+            const yearTicks = [];
+            for (let yr = 2010; yr <= 2029; yr++) {
+                const d = daysSinceGenesis(new Date(yr + '-01-01'));
+                if (d > 1) yearTicks.push({ val: Math.log10(d), label: String(yr) });
+            }
+
+            // Y axis tick values (price levels)
+            const priceTicks = [1, 10, 100, 1000, 10000, 100000].map(p => Math.log10(p));
+
+            window._loglogChart = new Chart(document.getElementById('loglogChart').getContext('2d'), {
+                type: 'line',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: 'Power Law 지지선',
+                            data: llSupportPoints,
+                            borderColor: 'rgba(255,107,53,0.8)',
+                            borderWidth: 2, pointRadius: 0, tension: 0, fill: false, order: 3
+                        },
+                        {
+                            label: 'Power Law 추세선',
+                            data: llTrendPoints,
+                            borderColor: 'rgba(0,212,170,0.6)',
+                            borderWidth: 2, borderDash: [8, 4], pointRadius: 0, tension: 0, fill: false, order: 2
+                        },
+                        {
+                            label: '_trendFillLL',
+                            data: llTrendPoints,
+                            borderColor: 'transparent',
+                            backgroundColor: 'rgba(0,212,170,0.04)',
+                            borderWidth: 0, pointRadius: 0, tension: 0,
+                            fill: { target: 0, above: 'rgba(0,212,170,0.04)' },
+                            order: 4
+                        },
+                        {
+                            label: 'Bitcoin',
+                            data: llBtcPoints,
+                            borderColor: '#f7931a',
+                            borderWidth: 1.8, pointRadius: 0,
+                            pointHoverRadius: 4, pointHoverBackgroundColor: '#f7931a',
+                            tension: 0.1, fill: false, order: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 14,
+                            displayColors: true,
+                            filter: item => !item.dataset.label.startsWith('_'),
+                            callbacks: {
+                                title: items => {
+                                    if (!items.length) return '';
+                                    const logD = items[0].parsed.x;
+                                    const days = Math.pow(10, logD);
+                                    const date = new Date(GENESIS.getTime() + days * MS_PER_DAY);
+                                    return date.toISOString().slice(0, 10) + '  (log₁₀d=' + logD.toFixed(2) + ')';
+                                },
+                                label: ctx => {
+                                    if (ctx.dataset.label.startsWith('_')) return null;
+                                    const price = Math.pow(10, ctx.parsed.y);
+                                    return ` ${ctx.dataset.label}: ${formatPrice(price)}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                line65kLL: {
+                                    type: 'line',
+                                    yMin: Math.log10(65000), yMax: Math.log10(65000),
+                                    borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1.5, borderDash: [10, 6],
+                                    label: {
+                                        display: true, content: 'line in the sand: $65k', position: 'start',
+                                        backgroundColor: 'rgba(20,20,20,0.8)', color: 'rgba(255,255,255,0.6)',
+                                        font: { family: 'JetBrains Mono', size: 10, weight: '500' },
+                                        padding: { left: 6, right: 6, top: 3, bottom: 3 }, borderRadius: 4
+                                    }
+                                }
+                            }
+                        },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x', onPanComplete: function(ctx) { syncCharts(ctx.chart, 'loglog'); } },
+                            zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: function(ctx) { syncCharts(ctx.chart, 'loglog'); } },
+                            limits: { x: { min: llXmin - 0.1, max: llXmax + 0.1 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: llXmin - 0.05,
+                            max: llXmax + 0.05,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#666', font: { family: 'JetBrains Mono', size: 10 },
+                                callback: function(value) {
+                                    const match = yearTicks.find(t => Math.abs(t.val - value) < 0.01);
+                                    return match ? match.label : '';
+                                },
+                                autoSkip: true,
+                                maxTicksLimit: 14
+                            },
+                            afterBuildTicks: function(axis) {
+                                axis.ticks = yearTicks.map(t => ({ value: t.val }));
+                            },
+                            title: { display: true, text: 'log₁₀(days since genesis)', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            type: 'linear', position: 'left',
+                            min: Math.log10(0.5), max: Math.log10(200000),
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#888', font: { family: 'JetBrains Mono', size: 10 },
+                                callback: function(value) {
+                                    const price = Math.pow(10, value);
+                                    if ([1,10,100,1000,10000,100000].some(p => Math.abs(Math.log10(p) - value) < 0.01)) {
+                                        return formatPrice(price);
+                                    }
+                                    return '';
+                                },
+                                stepSize: 1
+                            },
+                            title: { display: true, text: 'log₁₀(price USD)', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+
+            // Hide loglog chart initially
+            document.getElementById('loglogChart').style.display = 'none';
+
+            // ═══════════════════════════
             // CHART 2: Z-Score Panel
             // ═══════════════════════════
             window._zScoreChart = new Chart(document.getElementById('zScoreChart').getContext('2d'), {
@@ -1011,24 +1183,91 @@
 
         }
 
-        // ─── ZOOM SYNC ───
+        // ─── ACTIVE TAB STATE ───
+        var _activeTab = 'semilog';
+
+        function switchTab(tab) {
+            _activeTab = tab;
+            var semiCanvas = document.getElementById('priceChart');
+            var llCanvas = document.getElementById('loglogChart');
+            var tabSemilog = document.getElementById('tabSemilog');
+            var tabLoglog = document.getElementById('tabLoglog');
+            var subtitle = document.getElementById('chartSubtitle');
+
+            if (tab === 'semilog') {
+                semiCanvas.style.display = 'block';
+                llCanvas.style.display = 'none';
+                tabSemilog.classList.add('active');
+                tabLoglog.classList.remove('active');
+                subtitle.textContent = '세미로그 스케일 · 주간 데이터';
+                if (window._priceChart) window._priceChart.resize();
+            } else {
+                semiCanvas.style.display = 'none';
+                llCanvas.style.display = 'block';
+                tabSemilog.classList.remove('active');
+                tabLoglog.classList.add('active');
+                subtitle.textContent = 'log-log 스케일 · 주간 데이터';
+                if (window._loglogChart) window._loglogChart.resize();
+            }
+            resetZoom();
+        }
+
+        // ─── ZOOM SYNC (supports log-log ↔ time conversion) ───
         var _syncing = false;
+        var _GENESIS_TIME = new Date('2009-01-03').getTime();
+        var _MS_DAY = 86400000;
+
+        function logToTime(logVal) {
+            return _GENESIS_TIME + Math.pow(10, logVal) * _MS_DAY;
+        }
+        function timeToLog(ts) {
+            var days = (ts - _GENESIS_TIME) / _MS_DAY;
+            return days > 1 ? Math.log10(days) : 0;
+        }
+
         function syncCharts(sourceChart, sourceId) {
             if (_syncing) return;
             _syncing = true;
+
             var xMin = sourceChart.scales.x.min;
             var xMax = sourceChart.scales.x.max;
-            var target = sourceId === 'price' ? window._zScoreChart : window._priceChart;
-            if (target) {
-                target.options.scales.x.min = xMin;
-                target.options.scales.x.max = xMax;
-                target.update('none');
+
+            if (sourceId === 'loglog') {
+                // log-log → z-score (convert log to time)
+                var tMin = logToTime(xMin);
+                var tMax = logToTime(xMax);
+                if (window._zScoreChart) {
+                    window._zScoreChart.options.scales.x.min = tMin;
+                    window._zScoreChart.options.scales.x.max = tMax;
+                    window._zScoreChart.update('none');
+                }
+            } else if (sourceId === 'price') {
+                // semi-log → z-score (same time axis)
+                if (window._zScoreChart) {
+                    window._zScoreChart.options.scales.x.min = xMin;
+                    window._zScoreChart.options.scales.x.max = xMax;
+                    window._zScoreChart.update('none');
+                }
+            } else if (sourceId === 'zscore') {
+                // z-score → active price chart
+                if (_activeTab === 'semilog' && window._priceChart) {
+                    window._priceChart.options.scales.x.min = xMin;
+                    window._priceChart.options.scales.x.max = xMax;
+                    window._priceChart.update('none');
+                } else if (_activeTab === 'loglog' && window._loglogChart) {
+                    var lMin = timeToLog(xMin);
+                    var lMax = timeToLog(xMax);
+                    window._loglogChart.options.scales.x.min = lMin;
+                    window._loglogChart.options.scales.x.max = lMax;
+                    window._loglogChart.update('none');
+                }
             }
-            // show reset button
+
             var btn = document.getElementById('zoomResetBtn');
             if (btn) btn.style.display = 'block';
             _syncing = false;
         }
+
         function resetZoom() {
             var origMin = new Date('2009-01-01').getTime();
             var origMax = new Date('2029-12-31').getTime();
@@ -1039,6 +1278,13 @@
                     c.update('none');
                 }
             });
+            if (window._loglogChart) {
+                var llXmin = Math.log10((new Date('2009-07-01') - _GENESIS_TIME) / _MS_DAY) - 0.05;
+                var llXmax = Math.log10((new Date('2029-12-31') - _GENESIS_TIME) / _MS_DAY) + 0.05;
+                window._loglogChart.options.scales.x.min = llXmin;
+                window._loglogChart.options.scales.x.max = llXmax;
+                window._loglogChart.update('none');
+            }
             var btn = document.getElementById('zoomResetBtn');
             if (btn) btn.style.display = 'none';
         }
