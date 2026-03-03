@@ -450,6 +450,7 @@
             </div>
             <div class="chart-container-zscore">
                 <canvas id="zScoreChart"></canvas>
+                <canvas id="zScoreChartLL" style="display:none"></canvas>
             </div>
             <div class="zoom-hint">마우스 휠로 줌 · 드래그로 이동 · 모바일: 핀치 줌</div>
         </div>
@@ -1181,6 +1182,140 @@
                 }
             });
 
+            // ═══════════════════════════
+            // CHART 2B: Z-Score Panel (Log-Log X-axis)
+            // ═══════════════════════════
+            const llGoldBtcBarData = goldBtcZWeekly.map(d => {
+                const days = daysSinceGenesis(d.date);
+                return days > 1 ? { x: Math.log10(days), y: -d.zScore } : null;
+            }).filter(Boolean);
+
+            // Convert cycle annotations to log space
+            const llCycleAnnotations = {};
+            Object.keys(cycleAnnotations).forEach(key => {
+                const ann = cycleAnnotations[key];
+                const ts = ann.xValue;
+                const days = (ts - GENESIS.getTime()) / MS_PER_DAY;
+                if (days > 1) {
+                    llCycleAnnotations[key] = { ...ann, xValue: Math.log10(days) };
+                }
+            });
+
+            window._zScoreChartLL = new Chart(document.getElementById('zScoreChartLL').getContext('2d'), {
+                type: 'bar',
+                plugins: [watermarkPlugin],
+                data: {
+                    datasets: [
+                        {
+                            label: '금 대비 BTC Z-Score',
+                            data: llGoldBtcBarData,
+                            backgroundColor: llGoldBtcBarData.map(d =>
+                                d.y >= 2 ? 'rgba(255,71,87,0.8)' :
+                                d.y <= -2 ? 'rgba(0,212,170,0.8)' :
+                                d.y >= 0 ? 'rgba(255,107,53,0.7)' : 'rgba(255,107,53,0.5)'
+                            ),
+                            borderColor: 'transparent',
+                            barPercentage: 1.0, categoryPercentage: 1.0,
+                            barThickness: 'flex', maxBarThickness: 5, order: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(10,10,10,0.95)',
+                            titleColor: '#fff', bodyColor: '#ccc',
+                            borderColor: '#333', borderWidth: 1, padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                title: items => {
+                                    if (!items.length) return '';
+                                    const logD = items[0].parsed.x;
+                                    const days = Math.pow(10, logD);
+                                    const date = new Date(GENESIS.getTime() + days * MS_PER_DAY);
+                                    return date.toISOString().slice(0, 10);
+                                },
+                                label: ctx => {
+                                    const v = ctx.parsed.y;
+                                    const zone = v >= 2 ? ' (BTC 고평가)' : v <= -2 ? ' (BTC 저평가)' : '';
+                                    return ` ${ctx.dataset.label}: ${v >= 0 ? '+' : ''}${v.toFixed(2)}σ${zone}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                overboughtZone: {
+                                    type: 'box', yMin: 2, yMax: 7,
+                                    backgroundColor: 'rgba(255,71,87,0.05)',
+                                    borderColor: 'rgba(255,71,87,0.15)', borderWidth: 1, borderDash: [3, 3],
+                                    label: {
+                                        display: true, content: 'BTC 고평가 (금 대비)',
+                                        position: { x: 'start', y: 'center' },
+                                        color: 'rgba(255,71,87,0.45)',
+                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
+                                    }
+                                },
+                                oversoldZone: {
+                                    type: 'box', yMin: -5.5, yMax: -2,
+                                    backgroundColor: 'rgba(0,212,170,0.05)',
+                                    borderColor: 'rgba(0,212,170,0.15)', borderWidth: 1, borderDash: [3, 3],
+                                    label: {
+                                        display: true, content: 'BTC 저평가 (금 대비)',
+                                        position: { x: 'start', y: 'center' },
+                                        color: 'rgba(0,212,170,0.45)',
+                                        font: { family: 'JetBrains Mono', size: 9, weight: '600' }, padding: 4
+                                    }
+                                },
+                                zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderDash: [4, 4] },
+                                plus2: { type: 'line', yMin: 2, yMax: 2, borderColor: 'rgba(255,71,87,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                minus2: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(0,212,170,0.2)', borderWidth: 1, borderDash: [2, 4] },
+                                ...llCycleAnnotations
+                            }
+                        },
+                        zoom: {
+                            pan: { enabled: true, mode: 'x', onPanComplete: function(ctx) { syncCharts(ctx.chart, 'zscoreLL'); } },
+                            zoom: { wheel: { enabled: true, speed: 0.1 }, pinch: { enabled: true }, mode: 'x', onZoomComplete: function(ctx) { syncCharts(ctx.chart, 'zscoreLL'); } },
+                            limits: { x: { min: llXmin - 0.1, max: llXmax + 0.1 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: llXmin - 0.05,
+                            max: llXmax + 0.05,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#666', font: { family: 'JetBrains Mono', size: 11 },
+                                callback: function(value) {
+                                    const match = yearTicks.find(t => Math.abs(t.val - value) < 0.01);
+                                    return match ? match.label : '';
+                                },
+                                autoSkip: true,
+                                maxTicksLimit: 14
+                            },
+                            afterBuildTicks: function(axis) {
+                                axis.ticks = yearTicks.map(t => ({ value: t.val }));
+                            },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            type: 'linear', position: 'left', min: -5.5, max: 7,
+                            grid: { color: 'rgba(255,255,255,0.04)', drawTicks: false },
+                            ticks: {
+                                color: '#888', font: { family: 'JetBrains Mono', size: 10 },
+                                callback: v => Number.isInteger(v) ? (v >= 0 ? '+' : '') + v + 'σ' : '',
+                                stepSize: 1
+                            },
+                            title: { display: true, text: '52주 Z-Score (금 대비)', color: '#666', font: { family: 'JetBrains Mono', size: 10 } },
+                            border: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+
         }
 
         // ─── ACTIVE TAB STATE ───
@@ -1190,6 +1325,8 @@
             _activeTab = tab;
             var semiCanvas = document.getElementById('priceChart');
             var llCanvas = document.getElementById('loglogChart');
+            var zCanvas = document.getElementById('zScoreChart');
+            var zLLCanvas = document.getElementById('zScoreChartLL');
             var tabSemilog = document.getElementById('tabSemilog');
             var tabLoglog = document.getElementById('tabLoglog');
             var subtitle = document.getElementById('chartSubtitle');
@@ -1197,33 +1334,31 @@
             if (tab === 'semilog') {
                 semiCanvas.style.display = 'block';
                 llCanvas.style.display = 'none';
+                zCanvas.style.display = 'block';
+                zLLCanvas.style.display = 'none';
                 tabSemilog.classList.add('active');
                 tabLoglog.classList.remove('active');
                 subtitle.textContent = '세미로그 스케일 · 주간 데이터';
                 if (window._priceChart) window._priceChart.resize();
+                if (window._zScoreChart) window._zScoreChart.resize();
             } else {
                 semiCanvas.style.display = 'none';
                 llCanvas.style.display = 'block';
+                zCanvas.style.display = 'none';
+                zLLCanvas.style.display = 'block';
                 tabSemilog.classList.remove('active');
                 tabLoglog.classList.add('active');
                 subtitle.textContent = 'log-log 스케일 · 주간 데이터';
                 if (window._loglogChart) window._loglogChart.resize();
+                if (window._zScoreChartLL) window._zScoreChartLL.resize();
             }
             resetZoom();
         }
 
-        // ─── ZOOM SYNC (supports log-log ↔ time conversion) ───
+        // ─── ZOOM SYNC ───
         var _syncing = false;
         var _GENESIS_TIME = new Date('2009-01-03').getTime();
         var _MS_DAY = 86400000;
-
-        function logToTime(logVal) {
-            return _GENESIS_TIME + Math.pow(10, logVal) * _MS_DAY;
-        }
-        function timeToLog(ts) {
-            var days = (ts - _GENESIS_TIME) / _MS_DAY;
-            return days > 1 ? Math.log10(days) : 0;
-        }
 
         function syncCharts(sourceChart, sourceId) {
             if (_syncing) return;
@@ -1233,33 +1368,32 @@
             var xMax = sourceChart.scales.x.max;
 
             if (sourceId === 'loglog') {
-                // log-log → z-score (convert log to time)
-                var tMin = logToTime(xMin);
-                var tMax = logToTime(xMax);
-                if (window._zScoreChart) {
-                    window._zScoreChart.options.scales.x.min = tMin;
-                    window._zScoreChart.options.scales.x.max = tMax;
-                    window._zScoreChart.update('none');
+                // log-log price → log-log z-score (same log axis)
+                if (window._zScoreChartLL) {
+                    window._zScoreChartLL.options.scales.x.min = xMin;
+                    window._zScoreChartLL.options.scales.x.max = xMax;
+                    window._zScoreChartLL.update('none');
                 }
             } else if (sourceId === 'price') {
-                // semi-log → z-score (same time axis)
+                // semi-log price → linear z-score (same time axis)
                 if (window._zScoreChart) {
                     window._zScoreChart.options.scales.x.min = xMin;
                     window._zScoreChart.options.scales.x.max = xMax;
                     window._zScoreChart.update('none');
                 }
+            } else if (sourceId === 'zscoreLL') {
+                // log-log z-score → log-log price (same log axis)
+                if (window._loglogChart) {
+                    window._loglogChart.options.scales.x.min = xMin;
+                    window._loglogChart.options.scales.x.max = xMax;
+                    window._loglogChart.update('none');
+                }
             } else if (sourceId === 'zscore') {
-                // z-score → active price chart
-                if (_activeTab === 'semilog' && window._priceChart) {
+                // linear z-score → semi-log price (same time axis)
+                if (window._priceChart) {
                     window._priceChart.options.scales.x.min = xMin;
                     window._priceChart.options.scales.x.max = xMax;
                     window._priceChart.update('none');
-                } else if (_activeTab === 'loglog' && window._loglogChart) {
-                    var lMin = timeToLog(xMin);
-                    var lMax = timeToLog(xMax);
-                    window._loglogChart.options.scales.x.min = lMin;
-                    window._loglogChart.options.scales.x.max = lMax;
-                    window._loglogChart.update('none');
                 }
             }
 
@@ -1278,13 +1412,15 @@
                     c.update('none');
                 }
             });
-            if (window._loglogChart) {
-                var llXmin = Math.log10((new Date('2009-07-01') - _GENESIS_TIME) / _MS_DAY) - 0.05;
-                var llXmax = Math.log10((new Date('2029-12-31') - _GENESIS_TIME) / _MS_DAY) + 0.05;
-                window._loglogChart.options.scales.x.min = llXmin;
-                window._loglogChart.options.scales.x.max = llXmax;
-                window._loglogChart.update('none');
-            }
+            var llXmin = Math.log10((new Date('2009-07-01') - _GENESIS_TIME) / _MS_DAY) - 0.05;
+            var llXmax = Math.log10((new Date('2029-12-31') - _GENESIS_TIME) / _MS_DAY) + 0.05;
+            [window._loglogChart, window._zScoreChartLL].forEach(function(c) {
+                if (c) {
+                    c.options.scales.x.min = llXmin;
+                    c.options.scales.x.max = llXmax;
+                    c.update('none');
+                }
+            });
             var btn = document.getElementById('zoomResetBtn');
             if (btn) btn.style.display = 'none';
         }
