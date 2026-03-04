@@ -68,9 +68,8 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
 .chart-title .dot.silver { background: #c0c0c0; }
 .chart-title .dot.gold   { background: #f59e0b; }
 .chart-title .dot.orange { background: var(--accent-orange); }
-.chart-wrapper { position: relative; height: 300px; width: 100%; display: block; }
-.chart-wrapper.zscore { height: 260px; width: 100%; display: block; }
-.chart-wrapper canvas { display: block !important; }
+.chart-wrapper { position: relative; height: 300px; width: 100%; }
+.chart-wrapper.zscore { position: relative; height: 260px; width: 100%; }
 
 .zscore-legend { display: flex; gap: 20px; margin-top: 8px; font-size: 11px; color: var(--text-muted); justify-content: center; flex-wrap: wrap; }
 .zscore-legend span { display: flex; align-items: center; gap: 5px; }
@@ -97,8 +96,8 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
   .container { padding: 12px; }
   .controls { flex-direction: column; align-items: center; }
   .info-bar { flex-direction: column; gap: 12px; }
-  .chart-wrapper { height: 200px; }
-  .chart-wrapper.zscore { height: 200px; }
+  .chart-wrapper { height: 180px; }
+  .chart-wrapper.zscore { height: 180px; }
   .share-group { flex-wrap: wrap; }
   .share-btn { font-size: 11px; padding: 6px 10px; }
 }
@@ -145,7 +144,7 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
       <span class="dot silver" id="priceDot"></span>
       <span id="priceChartTitle">SLV (은) — 가격</span>
     </div>
-    <div class="chart-wrapper"><canvas id="priceChart" style="display:block;width:100%;height:100%;"></canvas></div>
+    <div class="chart-wrapper" id="priceWrapper"><canvas id="priceChart"></canvas></div>
   </div>
 
   <div class="chart-section">
@@ -153,7 +152,7 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
       <span class="dot orange"></span>
       <span id="zscoreChartTitle">52주 Z-Score · 금 대비 은 밸류에이션</span>
     </div>
-    <div class="chart-wrapper zscore"><canvas id="zscoreChart" style="display:block;width:100%;height:100%;"></canvas></div>
+    <div class="chart-wrapper zscore" id="zscoreWrapper"><canvas id="zscoreChart"></canvas></div>
     <div class="zscore-legend">
       <span><span class="box over"></span> 고평가 (금 대비)</span>
       <span><span class="box under"></span> 저평가 (금 대비)</span>
@@ -181,6 +180,24 @@ let slvData = null, gldData = null;
 let currentAsset = 'SLV';
 let currentWindow = 504;
 let priceChart = null, zscoreChart = null;
+
+// chart.destroy() 후 canvas를 새것으로 교체 (이전 인스턴스 흔적 제거)
+function getChartW() { return Math.max(300, window.innerWidth - 40); }
+
+function resetCanvas(wrapperId, canvasId, h) {
+  const wrapper = document.getElementById(wrapperId);
+  const old = document.getElementById(canvasId);
+  if (old) old.remove();
+  const c = document.createElement('canvas');
+  c.id = canvasId;
+  const w = getChartW();
+  c.width  = w;
+  c.height = h;
+  c.style.display = 'block';
+  wrapper.style.height = h + 'px';
+  wrapper.appendChild(c);
+  return c;
+}
 
 // ── 워터마크 플러그인
 const watermarkPlugin = {
@@ -361,15 +378,10 @@ function renderAll() {
 
   // 가격 차트
   const priceColor = currentAsset === 'SLV' ? '#c0c0c0' : '#f59e0b';
-  const priceCanvas = document.getElementById('priceChart');
-  const priceW = Math.max(300, Math.floor(window.innerWidth * 0.92));
-  const priceH = window.innerWidth <= 768 ? 200 : 300;
   if (priceChart) { priceChart.destroy(); priceChart = null; }
-  priceCanvas.setAttribute('width', priceW);
-  priceCanvas.setAttribute('height', priceH);
-  priceCanvas.style.width  = priceW + 'px';
-  priceCanvas.style.height = priceH + 'px';
-  priceChart = new Chart(priceCanvas.getContext('2d'), {
+  const priceH = window.innerWidth <= 768 ? 200 : 300;
+  const priceCanvas = resetCanvas('priceWrapper', 'priceChart', priceH);
+  priceChart = new Chart(priceCanvas, {
     type: 'line',
     data: { labels: priceLabels, datasets: [{ data: priceValues, borderColor: priceColor, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 3, tension: 0, fill: false }] },
     options: mkBaseOpts(priceFiltered.map(d => d.Date), v => `$${v.toFixed(v >= 100 ? 0 : 2)}`)
@@ -384,7 +396,6 @@ function renderAll() {
   // 피크 라벨 플러그인
   const peakLabels = findPeakLabels(validZ);
   const peakPlugin = {
-    id: 'peakLabels',
     afterDatasetsDraw(chart) {
       const { ctx, scales: { x, y } } = chart;
       ctx.save();
@@ -406,14 +417,11 @@ function renderAll() {
     }
   };
 
-  const zCanvas = document.getElementById('zscoreChart');
-  const zH = window.innerWidth <= 768 ? 200 : 260;
+  // Z-Score 차트
   if (zscoreChart) { zscoreChart.destroy(); zscoreChart = null; }
-  zCanvas.setAttribute('width', priceW);
-  zCanvas.setAttribute('height', zH);
-  zCanvas.style.width  = priceW + 'px';
-  zCanvas.style.height = zH + 'px';
-  zscoreChart = new Chart(zCanvas.getContext('2d'), {
+  const zH2 = window.innerWidth <= 768 ? 180 : 240;
+  const zCanvas = resetCanvas('zscoreWrapper', 'zscoreChart', zH2);
+  zscoreChart = new Chart(zCanvas, {
     type: 'bar',
     data: {
       labels: zLabels,
@@ -435,7 +443,6 @@ function renderAll() {
       }
     },
     plugins: [peakPlugin, {
-      id: 'refLines',
       afterDraw(chart) {
         const { ctx, scales: { x, y }, chartArea } = chart;
         ctx.save();
