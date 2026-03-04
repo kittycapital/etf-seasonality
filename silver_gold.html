@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>금은 밸류미터 | HerdVibe</title>
+<title>금 & 은 밸류미터 | HerdVibe</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -18,7 +20,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#000; color:#e8e8f0; }
 .ctrl { display:flex; flex-direction:column; gap:5px; align-items:center; }
 .ctrl label { font-size:10px; color:#666; text-transform:uppercase; letter-spacing:.5px; }
 .btns { display:flex; gap:4px; }
-.btn { font-family:'JetBrains Mono',monospace; font-size:12px; padding:7px 14px; background:#0d0d0d; color:#666; border:1px solid #1a1a1a; border-radius:6px; cursor:pointer; }
+.btn { font-family:'JetBrains Mono',monospace; font-size:12px; padding:7px 14px; background:#0d0d0d; color:#666; border:1px solid #1a1a1a; border-radius:6px; cursor:pointer; transition:all .15s; }
 .btn:hover { color:#e8e8f0; background:#1a1a1a; }
 .btn.on-cyan   { background:#22d3ee; color:#000; border-color:#22d3ee; font-weight:600; }
 .btn.on-silver { background:#c0c0c0; color:#000; border-color:#c0c0c0; font-weight:600; }
@@ -34,25 +36,34 @@ body { font-family:'Noto Sans KR',sans-serif; background:#000; color:#e8e8f0; }
 .banner.under { display:block; background:rgba(45,212,191,.08); border:1px solid rgba(45,212,191,.3); color:#2dd4bf; }
 .banner.mid   { display:block; background:rgba(100,100,100,.06); border:1px solid rgba(100,100,100,.2); color:#888; }
 .card { background:#0d0d0d; border:1px solid #1a1a1a; border-radius:8px; padding:16px; margin-bottom:14px; }
-.card-title { font-size:12px; color:#666; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
+.card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.card-title { font-size:12px; color:#666; display:flex; align-items:center; gap:7px; }
 .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .dot.silver{background:#c0c0c0} .dot.gold{background:#f59e0b} .dot.orange{background:#f97316}
+.zoom-btns { display:flex; gap:4px; }
+.zbtn { font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 8px; background:#111; color:#555; border:1px solid #222; border-radius:4px; cursor:pointer; transition:all .15s; }
+.zbtn:hover { color:#e8e8f0; border-color:#444; }
+.zbtn.reset { color:#22d3ee; border-color:#22d3ee22; }
+.zbtn.reset:hover { background:#22d3ee22; }
 .chart-box { position:relative; height:280px; }
 .chart-box.sm { height:240px; }
+.zoom-hint { font-size:10px; color:#333; text-align:center; margin-top:6px; font-family:'JetBrains Mono',monospace; }
 .legend { display:flex; gap:16px; margin-top:8px; justify-content:center; font-size:11px; color:#555; }
 .legend span { display:flex; align-items:center; gap:5px; }
 .leg-box { width:11px; height:11px; border-radius:2px; }
 .leg-over  { background:rgba(249,115,22,.5); border:1px solid #f97316; }
 .leg-under { background:rgba(45,212,191,.5); border:1px solid #2dd4bf; }
 .share-row { display:flex; justify-content:center; gap:7px; flex-wrap:wrap; margin:18px 0 10px; }
-.sbtn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border:1px solid #1a1a1a; border-radius:20px; background:#0d0d0d; color:#666; font-size:12px; cursor:pointer; text-decoration:none; }
+.sbtn { display:inline-flex; align-items:center; gap:5px; padding:7px 13px; border:1px solid #1a1a1a; border-radius:20px; background:#0d0d0d; color:#666; font-size:12px; cursor:pointer; text-decoration:none; transition:all .2s; }
 .sbtn:hover { color:#e8e8f0; border-color:#444; }
 .sbtn svg { width:13px; height:13px; fill:currentColor; flex-shrink:0; }
 .sbtn.tw:hover{color:#1da1f2;border-color:#1da1f2}
 .sbtn.kk:hover{color:#fee500;border-color:#fee500}
 .sbtn.tg:hover{color:#26a5e4;border-color:#26a5e4}
 .sbtn.ig:hover{color:#e4405f;border-color:#e4405f}
-.sbtn.cp:hover{color:#22d3ee;border-color:#22d3ee}
+.sbtn.cp:hover{color:#22c55e;border-color:#22c55e}
+.sbtn.flash-green { color:#22c55e !important; border-color:#22c55e !important; background:rgba(34,197,94,.1) !important; }
+.sbtn.flash-red   { color:#e4405f !important; border-color:#e4405f !important; background:rgba(228,64,95,.1) !important; }
 .footer { margin-top:20px; padding:14px 0; border-top:1px solid #1a1a1a; text-align:center; font-size:11px; color:#444; }
 .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(60px); background:#222; color:#fff; padding:9px 22px; border-radius:7px; font-size:12px; z-index:9999; opacity:0; transition:all .28s; pointer-events:none; white-space:nowrap; }
 .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
@@ -69,7 +80,7 @@ body { font-family:'Noto Sans KR',sans-serif; background:#000; color:#e8e8f0; }
 <body>
 <div class="wrap">
   <div class="header">
-    <h1>금은 밸류미터</h1>
+    <h1>금 & 은 밸류미터</h1>
     <div class="sub" id="updated">Loading...</div>
   </div>
   <div class="controls">
@@ -97,26 +108,39 @@ body { font-family:'Noto Sans KR',sans-serif; background:#000; color:#e8e8f0; }
     <div class="iitem"><div class="lbl">표시 기간</div><div class="val neu" id="iRange">-</div></div>
   </div>
   <div class="banner" id="banner"></div>
+
   <div class="card">
-    <div class="card-title"><span class="dot silver" id="priceDot"></span><span id="priceTitle">SLV (은) — 가격</span></div>
+    <div class="card-header">
+      <div class="card-title"><span class="dot silver" id="priceDot"></span><span id="priceTitle">SLV (은) — 가격</span></div>
+      <div class="zoom-btns">
+        <button class="zbtn" onclick="zoomIn()">＋</button>
+        <button class="zbtn" onclick="zoomOut()">－</button>
+        <button class="zbtn reset" onclick="resetZoom()">전체</button>
+      </div>
+    </div>
     <div class="chart-box"><canvas id="priceChart"></canvas></div>
+    <div class="zoom-hint">🖱 드래그: 구간 선택 줌 &nbsp;|&nbsp; 스크롤: 줌 &nbsp;|&nbsp; 핀치: 모바일 줌</div>
   </div>
+
   <div class="card">
-    <div class="card-title"><span class="dot orange"></span><span id="zTitle">2년 Z-Score · 금 대비 은 밸류에이션</span></div>
+    <div class="card-header">
+      <div class="card-title"><span class="dot orange"></span><span id="zTitle">2년 Z-Score · 금 대비 은 밸류에이션</span></div>
+    </div>
     <div class="chart-box sm"><canvas id="zscoreChart"></canvas></div>
     <div class="legend">
       <span><span class="leg-box leg-over"></span> 고평가 (금 대비)</span>
       <span><span class="leg-box leg-under"></span> 저평가 (금 대비)</span>
     </div>
   </div>
+
   <div class="share-row">
     <a class="sbtn tw" href="#" onclick="doShare('tw');return false;"><svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>X</a>
     <a class="sbtn kk" href="#" onclick="doShare('kk');return false;"><svg viewBox="0 0 24 24"><path d="M12 3c-5.08 0-9.2 3.34-9.2 7.46 0 2.64 1.73 4.96 4.35 6.32l-1.1 4.07c-.1.36.32.65.63.44l4.84-3.18c.16.01.32.02.48.02 5.08 0 9.2-3.34 9.2-7.46S17.08 3 12 3z"/></svg>카카오톡</a>
     <a class="sbtn tg" href="#" onclick="doShare('tg');return false;"><svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>텔레그램</a>
-    <a class="sbtn ig" href="#" onclick="doShare('ig');return false;"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>인스타그램</a>
-    <a class="sbtn cp" href="#" onclick="doShare('cp');return false;"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>링크 복사</a>
+    <a class="sbtn ig" id="btnIg" href="#" onclick="doShare('ig');return false;"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>인스타그램</a>
+    <a class="sbtn cp" id="btnCp" href="#" onclick="doShare('cp');return false;"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>링크 복사</a>
   </div>
-  <div class="footer">Herdvibe.com · 금은 밸류미터 · Z-Score 기반 상대 밸류에이션</div>
+  <div class="footer">Herdvibe.com · 금 & 은 밸류미터 · Z-Score 기반 상대 밸류에이션</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -125,9 +149,10 @@ const SHARE_URL = 'https://herdvibe.com/116';
 let SLV = [], GLD = [];
 let asset = 'SLV', win = 504;
 let chartP = null, chartZ = null;
-let pkLabels = []; // 피크 라벨 (afterDatasetsDraw에서 참조)
+let pkLabels = [];
+let syncing = false; // 무한 루프 방지
 
-// ── CSV 로드
+// ── CSV
 function loadCSV(url) {
   return new Promise((res, rej) => {
     Papa.parse(url, {
@@ -138,65 +163,62 @@ function loadCSV(url) {
   });
 }
 
-// ── Z-Score 계산
+// ── Z-Score
 function calcZ(slv, gld, w) {
   const gMap = {};
   gld.forEach(d => gMap[d.Date] = d.Close);
-  const m = slv.filter(d => gMap[d.Date]).map(d => ({
-    date: d.Date, ratio: d.Close / gMap[d.Date]
-  }));
+  const m = slv.filter(d => gMap[d.Date]).map(d => ({ date: d.Date, ratio: d.Close / gMap[d.Date] }));
   const result = [];
   for (let i = w - 1; i < m.length; i++) {
     const slice = m.slice(i - w + 1, i + 1).map(x => x.ratio);
-    const mean = slice.reduce((a,b) => a+b, 0) / w;
-    const std  = Math.sqrt(slice.map(v => (v-mean)**2).reduce((a,b) => a+b, 0) / w);
-    result.push({ date: m[i].date, ratio: m[i].ratio, z: std > 0 ? (m[i].ratio - mean) / std : 0 });
+    const mean = slice.reduce((a,b)=>a+b,0)/w;
+    const std  = Math.sqrt(slice.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/w);
+    result.push({ date: m[i].date, ratio: m[i].ratio, z: std>0?(m[i].ratio-mean)/std:0 });
   }
   return result;
 }
 
-// ── 피크 탐색
-function findPeaks(data, n = 5) {
-  const gap = Math.max(10, Math.floor(data.length / 25));
-  const hi = [], lo = [];
-  for (let i = gap; i < data.length - gap; i++) {
-    const z = data[i].z;
-    const L = data.slice(Math.max(0,i-gap), i).map(d=>d.z);
-    const R = data.slice(i+1, Math.min(data.length, i+gap+1)).map(d=>d.z);
-    if (z > Math.max(...L) && z > Math.max(...R)) hi.push({i,z});
-    if (z < Math.min(...L) && z < Math.min(...R)) lo.push({i,z});
+// ── 피크
+function findPeaks(data, n=5) {
+  const gap = Math.max(10, Math.floor(data.length/25));
+  const hi=[], lo=[];
+  for (let i=gap; i<data.length-gap; i++) {
+    const z=data[i].z;
+    const L=data.slice(Math.max(0,i-gap),i).map(d=>d.z);
+    const R=data.slice(i+1,Math.min(data.length,i+gap+1)).map(d=>d.z);
+    if (z>Math.max(...L)&&z>Math.max(...R)) hi.push({i,z});
+    if (z<Math.min(...L)&&z<Math.min(...R)) lo.push({i,z});
   }
   hi.sort((a,b)=>b.z-a.z); lo.sort((a,b)=>a.z-b.z);
-  return [...hi.slice(0,n).map(p=>({...p,t:'hi'})), ...lo.slice(0,n).map(p=>({...p,t:'lo'}))];
+  return [...hi.slice(0,n).map(p=>({...p,t:'hi'})),...lo.slice(0,n).map(p=>({...p,t:'lo'}))];
 }
 
-// ── 차트 초기 생성 (딱 한 번만)
+// ── 차트 초기 생성
 function initCharts() {
   const peakPlugin = {
-    id: 'pk',
+    id:'pk',
     afterDatasetsDraw(chart) {
       if (!pkLabels.length) return;
-      const {ctx, scales:{x,y}} = chart;
+      const {ctx,scales:{x,y}} = chart;
       ctx.save();
-      pkLabels.forEach(({i, z, t}) => {
-        const isPk = t === 'hi';
-        ctx.font = 'bold 10px "JetBrains Mono",monospace';
-        ctx.fillStyle = isPk ? '#f97316' : '#2dd4bf';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = isPk ? 'bottom' : 'top';
+      pkLabels.forEach(({i,z,t}) => {
         try {
-          const px = x.getPixelForIndex(i);
-          const py = y.getPixelForValue(z);
-          ctx.fillText(`${isPk?'▲':'▼'} ${z>=0?'+':''}${z.toFixed(1)}σ`, px, py + (isPk?-4:4));
+          const isPk = t==='hi';
+          ctx.font = 'bold 10px "JetBrains Mono",monospace';
+          ctx.fillStyle = isPk?'#f97316':'#2dd4bf';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = isPk?'bottom':'top';
+          ctx.fillText(`${isPk?'▲':'▼'} ${z>=0?'+':''}${z.toFixed(1)}σ`,
+            x.getPixelForIndex(i), y.getPixelForValue(z)+(isPk?-4:4));
         } catch(e) {}
       });
       ctx.restore();
     }
   };
   const refPlugin = {
-    id: 'ref',
+    id:'ref',
     afterDraw(chart) {
-      const {ctx, scales:{y}, chartArea:{left,right}} = chart;
+      const {ctx,scales:{y},chartArea:{left,right}} = chart;
       ctx.save();
       [[2,'rgba(249,115,22,.4)'],[-2,'rgba(45,212,191,.4)'],[0,'rgba(136,136,136,.25)']].forEach(([v,col]) => {
         const py = y.getPixelForValue(v);
@@ -213,149 +235,175 @@ function initCharts() {
     }
   };
 
-  const commonOpts = (fullLabels, fmtY) => ({
+  const zoomOpts = {
+    zoom: {
+      wheel: { enabled: true, speed: 0.08 },
+      pinch: { enabled: true },
+      drag: { enabled: true, backgroundColor: 'rgba(100,100,100,0.1)', borderColor: 'rgba(100,100,100,0.5)', borderWidth: 1 },
+      mode: 'x',
+      onZoom: syncZoom
+    },
+    pan: { enabled: true, mode: 'x', onPan: syncZoom }
+  };
+
+  const commonOpts = (fmtY) => ({
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
     plugins: {
       legend: {display:false},
-      tooltip: {
-        mode:'index', intersect:false,
-        backgroundColor:'#18181b', titleColor:'#666', bodyColor:'#e8e8f0',
-        borderColor:'#333', borderWidth:1,
-        titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'},
-        callbacks: { title: items => fullLabels[items[0].dataIndex] || '' }
-      }
+      tooltip: { mode:'index', intersect:false, backgroundColor:'#18181b', titleColor:'#666', bodyColor:'#e8e8f0', borderColor:'#333', borderWidth:1, titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'} },
+      zoom: zoomOpts
     },
     scales: {
-      x: { grid:{color:'#111'}, ticks:{color:'#444', font:{family:'JetBrains Mono',size:9}, maxRotation:0, maxTicksLimit:8} },
-      y: { position:'right', grid:{color:'#111'}, ticks:{color:'#444', font:{family:'JetBrains Mono',size:9}, callback:fmtY} }
+      x: { grid:{color:'#111'}, ticks:{color:'#444',font:{family:'JetBrains Mono',size:9},maxRotation:0,maxTicksLimit:8} },
+      y: { position:'right', grid:{color:'#111'}, ticks:{color:'#444',font:{family:'JetBrains Mono',size:9},callback:fmtY} }
     },
-    interaction: {mode:'index', intersect:false}
+    interaction: {mode:'index',intersect:false}
   });
 
   chartP = new Chart(document.getElementById('priceChart'), {
     type: 'line',
-    data: { labels: [], datasets: [{ data: [], borderColor: '#c0c0c0', borderWidth: 1.5, pointRadius: 0, tension: 0, fill: false }] },
-    options: commonOpts([], v => `$${v.toFixed(2)}`)
+    data: { labels:[], datasets:[{data:[],borderColor:'#c0c0c0',borderWidth:1.5,pointRadius:0,tension:0,fill:false}] },
+    options: commonOpts(v=>`$${v.toFixed(v>=100?0:2)}`)
   });
 
   chartZ = new Chart(document.getElementById('zscoreChart'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: [], borderWidth: 1, barPercentage: 1, categoryPercentage: 1 }] },
+    data: { labels:[], datasets:[{data:[],backgroundColor:[],borderColor:[],borderWidth:1,barPercentage:1,categoryPercentage:1}] },
     options: {
-      ...commonOpts([], v => `${v>=0?'+':''}${v.toFixed(1)}σ`),
+      ...commonOpts(v=>`${v>=0?'+':''}${v.toFixed(1)}σ`),
       plugins: {
-        legend: {display:false},
-        tooltip: { mode:'index', intersect:false, backgroundColor:'#18181b', titleColor:'#666', bodyColor:'#e8e8f0', borderColor:'#333', borderWidth:1, titleFont:{family:'JetBrains Mono'}, bodyFont:{family:'JetBrains Mono'} },
-        pk: {}, ref: {}
+        legend:{display:false},
+        tooltip:{ mode:'index',intersect:false,backgroundColor:'#18181b',titleColor:'#666',bodyColor:'#e8e8f0',borderColor:'#333',borderWidth:1,titleFont:{family:'JetBrains Mono'},bodyFont:{family:'JetBrains Mono'} },
+        zoom: zoomOpts,
+        pk:{}, ref:{}
       }
     },
     plugins: [peakPlugin, refPlugin]
   });
 }
 
-// ── 데이터 업데이트 (차트 재생성 없이)
+// ── 줌 연동 (두 차트 x축 동기화)
+function syncZoom(ctx) {
+  if (syncing) return;
+  syncing = true;
+  const src = ctx.chart;
+  const dst = src === chartP ? chartZ : chartP;
+  if (!dst) { syncing=false; return; }
+  const {min, max} = src.scales.x;
+  dst.zoomScale('x', {min, max}, 'none');
+  syncing = false;
+}
+
+function zoomIn()  { chartP?.zoom(1.3); chartZ?.zoom(1.3); }
+function zoomOut() { chartP?.zoom(0.77); chartZ?.zoom(0.77); }
+function resetZoom() { chartP?.resetZoom(); chartZ?.resetZoom(); }
+
+// ── 데이터 업데이트
 function update() {
   const zData = calcZ(SLV, GLD, win);
   if (!zData.length) return;
-  if (asset === 'GLD') zData.forEach(d => d.z = -d.z);
+  if (asset==='GLD') zData.forEach(d=>d.z=-d.z);
 
-  const zDates = new Set(zData.map(d => d.date));
-  const pSrc   = (asset === 'SLV' ? SLV : GLD).filter(d => zDates.has(d.Date));
-  const last   = pSrc[pSrc.length - 1];
-  const prev   = pSrc[pSrc.length - 2];
-  const lastZ  = zData[zData.length - 1];
+  const zDates = new Set(zData.map(d=>d.date));
+  const pSrc   = (asset==='SLV'?SLV:GLD).filter(d=>zDates.has(d.Date));
+  const last   = pSrc[pSrc.length-1], prev=pSrc[pSrc.length-2];
+  const lastZ  = zData[zData.length-1];
 
   // 정보 바
-  const dc = last.Close - prev.Close, dp = dc / prev.Close * 100;
+  const dc=last.Close-prev.Close, dp=dc/prev.Close*100;
   document.getElementById('iPrice').textContent = `$${last.Close.toFixed(2)}`;
-  const chEl = document.getElementById('iChange');
-  chEl.textContent = `${dc>=0?'+':''}${dc.toFixed(2)} (${dp>=0?'+':''}${dp.toFixed(2)}%)`;
-  chEl.className = `val ${dc>=0?'pos':'neg'}`;
-  const zEl = document.getElementById('iZ');
-  zEl.textContent = `${lastZ.z>=0?'+':''}${lastZ.z.toFixed(2)}σ`;
-  zEl.className = `val ${lastZ.z>0.5?'pos':lastZ.z<-0.5?'neg':'neu'}`;
-  document.getElementById('iRatio').textContent = lastZ.ratio.toFixed(4);
-  document.getElementById('iRange').textContent = `${zData[0].date.slice(0,7)} ~ ${lastZ.date.slice(0,7)}`;
+  const chEl=document.getElementById('iChange');
+  chEl.textContent=`${dc>=0?'+':''}${dc.toFixed(2)} (${dp>=0?'+':''}${dp.toFixed(2)}%)`;
+  chEl.className=`val ${dc>=0?'pos':'neg'}`;
+  const zEl=document.getElementById('iZ');
+  zEl.textContent=`${lastZ.z>=0?'+':''}${lastZ.z.toFixed(2)}σ`;
+  zEl.className=`val ${lastZ.z>0.5?'pos':lastZ.z<-0.5?'neg':'neu'}`;
+  document.getElementById('iRatio').textContent=lastZ.ratio.toFixed(4);
+  document.getElementById('iRange').textContent=`${zData[0].date.slice(0,7)} ~ ${lastZ.date.slice(0,7)}`;
 
   // 배너
-  const bn = document.getElementById('banner');
-  const an = asset==='SLV'?'은':'금', vs = asset==='SLV'?'금':'은';
-  if (lastZ.z > 2)       { bn.className='banner over';  bn.textContent=`▲ 현재 ${an}은 ${vs} 대비 역사적 고평가 구간 (+${lastZ.z.toFixed(2)}σ)`; }
-  else if (lastZ.z < -2) { bn.className='banner under'; bn.textContent=`▼ 현재 ${an}은 ${vs} 대비 역사적 저평가 구간 (${lastZ.z.toFixed(2)}σ)`; }
-  else                   { bn.className='banner mid';   bn.textContent=`현재 ${an}은 ${vs} 대비 중립 구간 (${lastZ.z>=0?'+':''}${lastZ.z.toFixed(2)}σ)`; }
+  const bn=document.getElementById('banner');
+  const an=asset==='SLV'?'은':'금', vs=asset==='SLV'?'금':'은';
+  if (lastZ.z>2)       {bn.className='banner over';  bn.textContent=`▲ 현재 ${an}은 ${vs} 대비 역사적 고평가 구간 (+${lastZ.z.toFixed(2)}σ)`;}
+  else if (lastZ.z<-2) {bn.className='banner under'; bn.textContent=`▼ 현재 ${an}은 ${vs} 대비 역사적 저평가 구간 (${lastZ.z.toFixed(2)}σ)`;}
+  else                 {bn.className='banner mid';   bn.textContent=`현재 ${an}은 ${vs} 대비 중립 구간 (${lastZ.z>=0?'+':''}${lastZ.z.toFixed(2)}σ)`;}
 
   // 타이틀
-  const wLbl = win===252?'1년(52주)':win===504?'2년':'5년';
-  document.getElementById('priceDot').className = `dot ${asset==='SLV'?'silver':'gold'}`;
-  document.getElementById('priceTitle').textContent = asset==='SLV'?'SLV (은) — 가격':'GLD (금) — 가격';
-  document.getElementById('zTitle').textContent = `${wLbl} Z-Score · ${vs} 대비 ${an} 밸류에이션 (고평가 / 저평가)`;
+  const wLbl=win===252?'1년(52주)':win===504?'2년':'5년';
+  document.getElementById('priceDot').className=`dot ${asset==='SLV'?'silver':'gold'}`;
+  document.getElementById('priceTitle').textContent=asset==='SLV'?'SLV (은) — 가격':'GLD (금) — 가격';
+  document.getElementById('zTitle').textContent=`${wLbl} Z-Score · ${vs} 대비 ${an} 밸류에이션 (고평가 / 저평가)`;
 
   // 다운샘플
-  const step = Math.max(1, Math.floor(zData.length / 500));
-  const pF = pSrc.filter((_,i) => i%step===0);
-  const zF = zData.filter((_,i) => i%step===0);
+  const step=Math.max(1,Math.floor(zData.length/500));
+  const pF=pSrc.filter((_,i)=>i%step===0);
+  const zF=zData.filter((_,i)=>i%step===0);
+  pkLabels=findPeaks(zF);
 
-  // 피크 업데이트 (플러그인에서 참조)
-  pkLabels = findPeaks(zF);
+  // 리셋 후 데이터 교체
+  chartP.resetZoom(); chartZ.resetZoom();
+  chartP.data.labels=pF.map(d=>d.Date.slice(0,7));
+  chartP.data.datasets[0].data=pF.map(d=>d.Close);
+  chartP.data.datasets[0].borderColor=asset==='SLV'?'#c0c0c0':'#f59e0b';
+  chartP.options.plugins.tooltip.callbacks={title:items=>pF[items[0].dataIndex]?.Date||''};
+  chartP.options.scales.y.ticks.callback=v=>`$${v.toFixed(v>=100?0:2)}`;
+  chartP.update('none');
 
-  // 가격 차트 데이터 업데이트
-  chartP.data.labels = pF.map(d => d.Date.slice(0,7));
-  chartP.data.datasets[0].data   = pF.map(d => d.Close);
-  chartP.data.datasets[0].borderColor = asset==='SLV'?'#c0c0c0':'#f59e0b';
-  chartP.options.plugins.tooltip.callbacks.title = items => pF[items[0].dataIndex]?.Date || '';
-  chartP.options.scales.y.ticks.callback = v => `$${v.toFixed(v>=100?0:2)}`;
-  chartP.update('none'); // 애니메이션 없이 즉시 업데이트
-
-  // Z-Score 차트 데이터 업데이트
-  chartZ.data.labels = zF.map(d => d.date.slice(0,7));
-  chartZ.data.datasets[0].data            = zF.map(d => d.z);
-  chartZ.data.datasets[0].backgroundColor = zF.map(d => d.z>=0?'rgba(249,115,22,.5)':'rgba(45,212,191,.5)');
-  chartZ.data.datasets[0].borderColor     = zF.map(d => d.z>=0?'rgba(249,115,22,.9)':'rgba(45,212,191,.9)');
-  chartZ.options.plugins.tooltip.callbacks = { title: items => zF[items[0].dataIndex]?.date || '' };
+  chartZ.data.labels=zF.map(d=>d.date.slice(0,7));
+  chartZ.data.datasets[0].data=zF.map(d=>d.z);
+  chartZ.data.datasets[0].backgroundColor=zF.map(d=>d.z>=0?'rgba(249,115,22,.5)':'rgba(45,212,191,.5)');
+  chartZ.data.datasets[0].borderColor=zF.map(d=>d.z>=0?'rgba(249,115,22,.9)':'rgba(45,212,191,.9)');
+  chartZ.options.plugins.tooltip.callbacks={title:items=>zF[items[0].dataIndex]?.date||''};
   chartZ.update('none');
 }
 
-// ── 공유
-function openURL(u) { try{const a=document.createElement('a');a.href=u;a.target='_top';document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){} }
-function copyText(t) {
+// ── 공유 & 버튼 플래시
+function flashBtn(id, cls, ms=1200) {
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.classList.add(cls);
+  setTimeout(()=>el.classList.remove(cls), ms);
+}
+function openURL(u){try{const a=document.createElement('a');a.href=u;a.target='_top';document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){}}
+function copyText(t){
   try{window.parent.postMessage({type:'clipboard',text:t},'*');}catch(e){}
   try{if(navigator.clipboard)navigator.clipboard.writeText(t);}catch(e){}
   try{const ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}catch(e){}
 }
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
 function doShare(p){
-  const txt=`${asset==='SLV'?'은(SLV)':'금(GLD)'} 밸류에이션 — 금은 밸류미터 | HerdVibe`;
+  const txt=`${asset==='SLV'?'은(SLV)':'금(GLD)'} 밸류에이션 — 금 & 은 밸류미터 | HerdVibe`;
   if(p==='tw') openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(txt)}&url=${encodeURIComponent(SHARE_URL)}`);
   else if(p==='kk') openURL(`https://story.kakao.com/share?url=${encodeURIComponent(SHARE_URL)}`);
   else if(p==='tg') openURL(`https://t.me/share/url?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent(txt)}`);
-  else if(p==='ig'){copyText(SHARE_URL);showToast('링크 복사됨 — 인스타그램에 붙여넣기');}
-  else if(p==='cp'){copyText(SHARE_URL);showToast('링크가 복사되었습니다');}
+  else if(p==='ig'){copyText(SHARE_URL);flashBtn('btnIg','flash-red');showToast('링크 복사됨 — 인스타그램에 붙여넣기 하세요');}
+  else if(p==='cp'){copyText(SHARE_URL);flashBtn('btnCp','flash-green');showToast('링크가 복사되었습니다');}
 }
 
 // ── 이벤트
-document.querySelectorAll('[data-asset]').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('[data-asset]').forEach(x => x.className='btn');
-  asset = b.dataset.asset;
-  b.className = `btn on-${asset==='SLV'?'silver':'gold'}`;
-  if (SLV.length) update();
+document.querySelectorAll('[data-asset]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-asset]').forEach(x=>x.className='btn');
+  asset=b.dataset.asset;
+  b.className=`btn on-${asset==='SLV'?'silver':'gold'}`;
+  if(SLV.length) update();
 }));
-document.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('[data-w]').forEach(x => x.className='btn');
-  b.className = 'btn on-cyan';
-  win = +b.dataset.w;
-  if (SLV.length) update();
+document.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-w]').forEach(x=>x.className='btn');
+  b.className='btn on-cyan';
+  win=+b.dataset.w;
+  if(SLV.length) update();
 }));
 
 // ── 초기 실행
-initCharts(); // 차트 뼈대 먼저 생성
-Promise.all([loadCSV('data/SLV.csv'), loadCSV('data/GLD.csv')]).then(([s, g]) => {
-  SLV = s; GLD = g;
-  document.getElementById('updated').textContent = `Last updated: ${SLV[SLV.length-1].Date}`;
-  update(); // 데이터만 밀어넣기
-}).catch(e => {
-  document.getElementById('updated').textContent = 'Data load error';
+initCharts();
+Promise.all([loadCSV('data/SLV.csv'),loadCSV('data/GLD.csv')]).then(([s,g])=>{
+  SLV=s; GLD=g;
+  document.getElementById('updated').textContent=`Last updated: ${SLV[SLV.length-1].Date}`;
+  update();
+}).catch(e=>{
+  document.getElementById('updated').textContent='Data load error';
   console.error(e);
 });
 </script>
