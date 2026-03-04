@@ -68,8 +68,9 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
 .chart-title .dot.silver { background: #c0c0c0; }
 .chart-title .dot.gold   { background: #f59e0b; }
 .chart-title .dot.orange { background: var(--accent-orange); }
-.chart-wrapper { position: relative; height: 300px; }
-.chart-wrapper.zscore { height: 260px; }
+.chart-wrapper { position: relative; height: 300px; width: 100%; display: block; }
+.chart-wrapper.zscore { height: 260px; width: 100%; display: block; }
+.chart-wrapper canvas { display: block !important; }
 
 .zscore-legend { display: flex; gap: 20px; margin-top: 8px; font-size: 11px; color: var(--text-muted); justify-content: center; flex-wrap: wrap; }
 .zscore-legend span { display: flex; align-items: center; gap: 5px; }
@@ -236,7 +237,7 @@ async function init() {
     const last = slvData[slvData.length - 1];
     document.getElementById('lastUpdated').textContent = `Last updated: ${last.Date}`;
     // DOM 완전 렌더 후 차트 그리기 (iframe 환경 대응)
-    setTimeout(renderAll, 100);
+    setTimeout(renderAll, 500);
   } catch(e) {
     document.getElementById('lastUpdated').textContent = 'Data load error';
     console.error(e);
@@ -359,12 +360,15 @@ function renderAll() {
   const priceValues = priceFiltered.map(d => d.Close);
 
   // 가격 차트
-  if (priceChart) priceChart.destroy();
   const priceColor = currentAsset === 'SLV' ? '#c0c0c0' : '#f59e0b';
   const priceCanvas = document.getElementById('priceChart');
-  const priceW = document.querySelector('.container').offsetWidth - 40 || window.innerWidth - 40;
-  priceCanvas.width  = priceW;
-  priceCanvas.height = window.innerWidth <= 768 ? 200 : 300;
+  const priceW = Math.max(300, Math.floor(window.innerWidth * 0.92));
+  const priceH = window.innerWidth <= 768 ? 200 : 300;
+  if (priceChart) { priceChart.destroy(); priceChart = null; }
+  priceCanvas.setAttribute('width', priceW);
+  priceCanvas.setAttribute('height', priceH);
+  priceCanvas.style.width  = priceW + 'px';
+  priceCanvas.style.height = priceH + 'px';
   priceChart = new Chart(priceCanvas.getContext('2d'), {
     type: 'line',
     data: { labels: priceLabels, datasets: [{ data: priceValues, borderColor: priceColor, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 3, tension: 0, fill: false }] },
@@ -402,10 +406,13 @@ function renderAll() {
     }
   };
 
-  if (zscoreChart) zscoreChart.destroy();
   const zCanvas = document.getElementById('zscoreChart');
-  zCanvas.width  = priceW;
-  zCanvas.height = window.innerWidth <= 768 ? 200 : 260;
+  const zH = window.innerWidth <= 768 ? 200 : 260;
+  if (zscoreChart) { zscoreChart.destroy(); zscoreChart = null; }
+  zCanvas.setAttribute('width', priceW);
+  zCanvas.setAttribute('height', zH);
+  zCanvas.style.width  = priceW + 'px';
+  zCanvas.style.height = zH + 'px';
   zscoreChart = new Chart(zCanvas.getContext('2d'), {
     type: 'bar',
     data: {
@@ -508,7 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.asset-btn').forEach(b => b.className = 'asset-btn');
       currentAsset = btn.dataset.asset;
       btn.classList.add(currentAsset === 'SLV' ? 'active-slv' : 'active-gld');
-      if (slvData && gldData) renderAll();
+      if (slvData && gldData) setTimeout(renderAll, 50);
     });
   });
 
@@ -518,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.window-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentWindow = parseInt(btn.dataset.days);
-      if (slvData && gldData) renderAll();
+      if (slvData && gldData) setTimeout(renderAll, 50);
     });
   });
 
@@ -536,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // iframe 환경에서 완전 로드 후 추가 렌더 보험
 window.addEventListener('load', () => {
-  setTimeout(() => { if (slvData && gldData) renderAll(); }, 300);
+  setTimeout(() => { if (slvData && gldData) renderAll(); }, 800);
 });
 </script>
 </body>
