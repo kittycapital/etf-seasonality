@@ -144,7 +144,7 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
       <span class="dot silver" id="priceDot"></span>
       <span id="priceChartTitle">SLV (은) — 가격</span>
     </div>
-    <div class="chart-wrapper"><canvas id="priceChart"></canvas></div>
+    <div class="chart-wrapper"><canvas id="priceChart" style="display:block;width:100%;height:100%;"></canvas></div>
   </div>
 
   <div class="chart-section">
@@ -152,7 +152,7 @@ body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-primary); c
       <span class="dot orange"></span>
       <span id="zscoreChartTitle">52주 Z-Score · 금 대비 은 밸류에이션</span>
     </div>
-    <div class="chart-wrapper zscore"><canvas id="zscoreChart"></canvas></div>
+    <div class="chart-wrapper zscore"><canvas id="zscoreChart" style="display:block;width:100%;height:100%;"></canvas></div>
     <div class="zscore-legend">
       <span><span class="box over"></span> 고평가 (금 대비)</span>
       <span><span class="box under"></span> 저평가 (금 대비)</span>
@@ -360,7 +360,10 @@ function renderAll() {
   // 가격 차트
   if (priceChart) priceChart.destroy();
   const priceColor = currentAsset === 'SLV' ? '#c0c0c0' : '#f59e0b';
-  priceChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
+  const priceCanvas = document.getElementById('priceChart');
+  priceCanvas.width  = priceCanvas.parentElement.offsetWidth  || 800;
+  priceCanvas.height = priceCanvas.parentElement.offsetHeight || 300;
+  priceChart = new Chart(priceCanvas.getContext('2d'), {
     type: 'line',
     data: { labels: priceLabels, datasets: [{ data: priceValues, borderColor: priceColor, borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 3, tension: 0, fill: false }] },
     options: mkBaseOpts(priceFiltered.map(d => d.Date), v => `$${v.toFixed(v >= 100 ? 0 : 2)}`)
@@ -398,7 +401,10 @@ function renderAll() {
   };
 
   if (zscoreChart) zscoreChart.destroy();
-  zscoreChart = new Chart(document.getElementById('zscoreChart').getContext('2d'), {
+  const zCanvas = document.getElementById('zscoreChart');
+  zCanvas.width  = zCanvas.parentElement.offsetWidth  || 800;
+  zCanvas.height = zCanvas.parentElement.offsetHeight || 260;
+  zscoreChart = new Chart(zCanvas.getContext('2d'), {
     type: 'bar',
     data: {
       labels: zLabels,
@@ -459,7 +465,7 @@ function renderAll() {
 // ── 공통 차트 옵션
 function mkBaseOpts(fullLabels, yCb, isBar = false) {
   return {
-    responsive: true,
+    responsive: false,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
@@ -512,6 +518,15 @@ document.addEventListener('DOMContentLoaded', () => {
       currentWindow = parseInt(btn.dataset.days);
       if (slvData && gldData) renderAll();
     });
+  });
+
+  // 리사이즈 시 재렌더링
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (slvData && gldData) renderAll();
+    }, 200);
   });
 
   init();
