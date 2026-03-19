@@ -366,10 +366,13 @@ function update() {
   document.getElementById('priceTitle').textContent=asset==='SLV'?'SLV (은) — 가격':'GLD (금) — 가격';
   document.getElementById('zTitle').textContent=`${wLbl} Z-Score · ${vs} 대비 ${an} 밸류에이션 (고평가 / 저평가)`;
 
-  // 다운샘플
+  // 다운샘플 (마지막 데이터 포인트 항상 포함)
   const step=Math.max(1,Math.floor(zData.length/500));
-  const pF=pSrc.filter((_,i)=>i%step===0);
-  const zF=zData.filter((_,i)=>i%step===0);
+  let pF=pSrc.filter((_,i)=>i%step===0);
+  let zF=zData.filter((_,i)=>i%step===0);
+  // 마지막 포인트가 빠졌으면 추가
+  if (pF[pF.length-1] !== pSrc[pSrc.length-1]) pF.push(pSrc[pSrc.length-1]);
+  if (zF[zF.length-1] !== zData[zData.length-1]) zF.push(zData[zData.length-1]);
   pkLabels=findPeaks(zF);
 
   // 리셋 후 데이터 교체
