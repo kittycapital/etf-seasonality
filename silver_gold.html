@@ -152,13 +152,31 @@ let chartP = null, chartZ = null;
 let pkLabels = [];
 let syncing = false; // 무한 루프 방지
 
-// ── CSV
+// ── CSV (헤더 대소문자/변형 자동 감지)
 function loadCSV(url) {
   return new Promise((res, rej) => {
     Papa.parse(url, {
       download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
-      complete: r => res(r.data.filter(d => d.Date && d.Close != null)),
-      error: rej
+      complete: r => {
+        if (!r.data.length) { console.warn('[CSV] 비어있음:', url); return res([]); }
+        // 헤더 자동 감지 (Date/date, Close/close/Adj Close 등)
+        const sample = r.data[0];
+        const keys = Object.keys(sample);
+        const dateKey = keys.find(k => /^date$/i.test(k.trim()));
+        const closeKey = keys.find(k => /^(close|adj\.?\s*close)$/i.test(k.trim()));
+        console.log(`[CSV] ${url} → ${r.data.length}행, 헤더: [${keys.join(', ')}], dateKey=${dateKey}, closeKey=${closeKey}`);
+        if (!dateKey || !closeKey) {
+          console.error(`[CSV] 헤더 매칭 실패! Date/Close 컬럼을 찾을 수 없음. 헤더: ${keys.join(', ')}`);
+          return res([]);
+        }
+        // 표준화: { Date, Close } 형태로 통일
+        const data = r.data
+          .filter(d => d[dateKey] && d[closeKey] != null)
+          .map(d => ({ Date: String(d[dateKey]).trim(), Close: +d[closeKey] }));
+        console.log(`[CSV] ${url} → 유효 행: ${data.length}, 기간: ${data[0]?.Date} ~ ${data[data.length-1]?.Date}`);
+        res(data);
+      },
+      error: e => { console.error('[CSV] 로드 실패:', url, e); rej(e); }
     });
   });
 }
@@ -168,6 +186,15 @@ function calcZ(slv, gld, w) {
   const gMap = {};
   gld.forEach(d => gMap[d.Date] = d.Close);
   const m = slv.filter(d => gMap[d.Date]).map(d => ({ date: d.Date, ratio: d.Close / gMap[d.Date] }));
+  console.log(`[Z] SLV=${slv.length}, GLD=${gld.length}, 날짜매칭=${m.length}, window=${w}`);
+  if (m.length < w) {
+    console.warn(`[Z] 매칭 데이터(${m.length})가 window(${w})보다 적음! Z-Score 계산 불가`);
+    // 날짜 형식 비교 (디버그)
+    if (slv.length && gld.length) {
+      console.warn(`[Z] SLV 날짜 샘플: "${slv[0].Date}", "${slv[slv.length-1].Date}"`);
+      console.warn(`[Z] GLD 날짜 샘플: "${gld[0].Date}", "${gld[gld.length-1].Date}"`);
+    }
+  }
   const result = [];
   for (let i = w - 1; i < m.length; i++) {
     const slice = m.slice(i - w + 1, i + 1).map(x => x.ratio);
@@ -175,6 +202,7 @@ function calcZ(slv, gld, w) {
     const std  = Math.sqrt(slice.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/w);
     result.push({ date: m[i].date, ratio: m[i].ratio, z: std>0?(m[i].ratio-mean)/std:0 });
   }
+  console.log(`[Z] 결과: ${result.length}행, 기간: ${result[0]?.date} ~ ${result[result.length-1]?.date}`);
   return result;
 }
 
@@ -303,13 +331,15 @@ function resetZoom() { chartP?.resetZoom(); chartZ?.resetZoom(); }
 // ── 데이터 업데이트
 function update() {
   const zData = calcZ(SLV, GLD, win);
-  if (!zData.length) return;
+  if (!zData.length) { console.warn('[update] Z-Score 데이터 없음 — 차트 업데이트 건너뜀'); return; }
   if (asset==='GLD') zData.forEach(d=>d.z=-d.z);
 
   const zDates = new Set(zData.map(d=>d.date));
   const pSrc   = (asset==='SLV'?SLV:GLD).filter(d=>zDates.has(d.Date));
+  if (pSrc.length < 2) { console.warn('[update] 가격 데이터 부족:', pSrc.length); return; }
   const last   = pSrc[pSrc.length-1], prev=pSrc[pSrc.length-2];
   const lastZ  = zData[zData.length-1];
+  console.log(`[update] asset=${asset}, pSrc=${pSrc.length}, zData=${zData.length}, last=${last.Date}`);
 
   // 정보 바
   const dc=last.Close-prev.Close, dp=dc/prev.Close*100;
@@ -398,13 +428,20 @@ document.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>
 
 // ── 초기 실행
 initCharts();
-Promise.all([loadCSV('data/SLV.csv'),loadCSV('data/GLD.csv')]).then(([s,g])=>{
+const BASE = '';  // 같은 레포 내 상대경로 (필요시 절대경로로 변경: 'https://kittycapital.github.io/etf-seasonality/')
+Promise.all([loadCSV(BASE+'data/SLV.csv'), loadCSV(BASE+'data/GLD.csv')]).then(([s,g])=>{
   SLV=s; GLD=g;
+  console.log(`[INIT] SLV=${SLV.length}행, GLD=${GLD.length}행`);
+  if (!SLV.length || !GLD.length) {
+    document.getElementById('updated').textContent='CSV 로드 실패 — 콘솔 확인';
+    console.error('[INIT] CSV 데이터가 비어있습니다. 헤더를 확인하세요.');
+    return;
+  }
   document.getElementById('updated').textContent=`Last updated: ${SLV[SLV.length-1].Date}`;
   update();
 }).catch(e=>{
-  document.getElementById('updated').textContent='Data load error';
-  console.error(e);
+  document.getElementById('updated').textContent='Data load error — 콘솔 확인';
+  console.error('[INIT] CSV 로드 에러:', e);
 });
 </script>
 </body>
